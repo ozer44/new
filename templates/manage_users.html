@@ -1,0 +1,173 @@
+<!-- Kullanıcı Düzenleme Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kullanıcı Düzenle</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    <div class="form-group">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" class="form-control" name="username" id="edit_username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" class="form-control" name="email" id="edit_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tam Ad</label>
+                        <input type="text" class="form-control" name="full_name" id="edit_full_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select class="form-control" name="role_id" id="edit_role_id">
+                            <option value="">Rol Seçin</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifre (Değiştirmek istemiyorsanız boş bırakın)</label>
+                        <input type="password" class="form-control" name="password" id="edit_password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="updateUserBtn">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Kullanıcı Oluşturma Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Kullanıcı Oluştur</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createUserForm">
+                    <div class="form-group">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tam Ad</label>
+                        <input type="text" class="form-control" name="full_name">
+                    </div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select class="form-control" name="role_id">
+                            <option value="">Rol Seçin</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Şifre</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="createUserBtn">Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Kullanıcı düzenleme
+    $('.edit-user').click(function() {
+        const userId = $(this).data('id');
+        const userData = $(this).data('user');
+        
+        $('#edit_user_id').val(userId);
+        $('#edit_username').val(userData.username);
+        $('#edit_email').val(userData.email);
+        $('#edit_full_name').val(userData.full_name);
+        $('#edit_role_id').val(userData.role_id);
+        
+        $('#editUserModal').modal('show');
+    });
+
+    // Kullanıcı güncelleme
+    $('#updateUserBtn').click(function() {
+        const userId = $('#edit_user_id').val();
+        const formData = {
+            username: $('#edit_username').val(),
+            email: $('#edit_email').val(),
+            full_name: $('#edit_full_name').val(),
+            role_id: $('#edit_role_id').val(),
+            password: $('#edit_password').val()
+        };
+
+        $.ajax({
+            url: `/admin/users/${userId}/update`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON.message);
+            }
+        });
+    });
+
+    // Yeni kullanıcı oluşturma
+    $('#createUserBtn').click(function() {
+        const formData = {
+            username: $('input[name="username"]').val(),
+            email: $('input[name="email"]').val(),
+            full_name: $('input[name="full_name"]').val(),
+            role_id: $('select[name="role_id"]').val(),
+            password: $('input[name="password"]').val()
+        };
+
+        $.ajax({
+            url: '/admin/users/create',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON.message);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

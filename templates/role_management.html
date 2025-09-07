@@ -1,0 +1,815 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- DEBUG: Kullanıcı sayısı -->
+<div style="color: red; font-weight: bold;">DEBUG: Kullanıcı sayısı = {{ users|length }}</div>
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Rol Yönetimi</h1>
+    
+    <!-- MOVED: Users section comes first -->
+    <div class="row">
+        <!-- Kullanıcı Listesi -->
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Kullanıcılar ve Rolleri</h6>
+                </div>
+                <div class="card-body">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Not:</strong> Bu tablo, sistemdeki tüm kullanıcıları ve sahip oldukları rolleri göstermektedir.
+                        </div><br>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="usersTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Kullanıcı Adı</th>
+                                    <th>E-posta</th>
+                                    <th>Tam İsim</th>
+                                    <th>Hesap Tipi</th>
+                                    <th>Roller</th>
+                                    <th>Yönetici</th>
+                                    <th>Son Giriş</th>
+                                    <th>Ekle / Çıkar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.full_name }}</td>
+                                    <td>
+                                        {% if user.account_type == 'AD' %}
+                                        <span class="badge bg-primary">AD</span>
+                                        {% elif user.is_oauth_user %}
+                                        <span class="badge bg-info">Microsoft</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Local</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.roles %}
+                                            {% for role in user.roles %}
+                                                <div class="mb-1">
+                                                    <span class="badge bg-primary">{{ role.name }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% if user.role %}
+                                                <div class="mb-1">
+                                                    <span class="badge bg-primary">{{ user.role.name }}</span>
+                                                </div>
+                                            {% else %}
+                                                <div class="mb-1">
+                                                    <span class="badge bg-warning">Rol Atanmamış</span>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_admin %}
+                                        <span class="badge bg-success">Evet</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Hayır</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Giriş Yapılmadı' }}</td>
+                                    <td>
+                                        {% if user.username != 'admin' %}
+                                            <button class="btn btn-sm btn-primary edit-user-roles-btn" 
+                                                    data-id="{{ user.id }}" 
+                                                    data-username="{{ user.username }}"
+                                                    title="Rolleri Düzenle">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                        {% else %}
+                                            <span class="badge bg-warning">Sistem Yöneticisi</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MOVED: Role and permissions sections come after users -->
+    <div class="row">
+        <!-- Roller Listesi -->
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Roller</h6>
+                    <button class="btn btn-primary btn-sm" id="addRoleBtn" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                        <i class="fas fa-plus fa-sm"></i> Yeni Rol Ekle
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Not:</strong> Rollere kullanıcı atamak için "Rol Ata" butonunu kullanın. Roller, kullanıcıların sistem içerisinde yapabilecekleri işlemleri belirler.
+                    </div><br>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="rolesTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Rol Adı</th>
+                                    <th>Açıklama</th>
+                                    <th>Kullanıcı Sayısı</th>
+                                    <th>Kullanıcılar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in roles %}
+                                <tr>
+                                    <td>{{ role.name }}</td>
+                                    <td>{{ role.description or '-' }}</td>
+                                    <td>{{ role.user_count }}</td>
+                                    <td>
+                                        {% if role.name == 'admin' %}
+                                            {% for user in role.users %}
+                                                <span class="badge bg-primary me-1">{{ user.username }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for user in role.role_users %}
+                                                <span class="badge bg-primary me-1">{{ user.username }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rol Ekleme Modal -->
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addRoleModalLabel">
+                    <i class="fas fa-plus me-2"></i>Yeni Rol Ekle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRoleForm">
+                    {% set form = get_empty_form() %}
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label">Rol Adı</label>
+                        <input type="text" class="form-control" id="roleName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="roleDescription" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveRoleBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rol Düzenleme Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editRoleModalLabel">
+                    <i class="fas fa-user-cog me-2"></i>Rol Düzenle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="roleUserList" class="mb-3">
+                    <!-- Rolün atandığı kullanıcılar buraya yüklenecek -->
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Yeni Kullanıcı Ata</label>
+                    <div class="input-group">
+                        <select class="form-select" id="newUserSelect">
+                            <option value="">Kullanıcı seçin...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" id="assignNewUser">
+                            <i class="fas fa-plus"></i> Ata
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İzinler Modal -->
+<div class="modal fade" id="permissionsModal" tabindex="-1" aria-labelledby="permissionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="permissionsModalLabel">
+                    <i class="fas fa-key me-2"></i>İzinler
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rolePermissionsList">
+                    <!-- Rolün izinleri buraya yüklenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Rolleri Görüntüleme ve Yönetme Modal -->
+<div class="modal fade" id="userRolesModal" tabindex="-1" aria-labelledby="userRolesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userRolesModalLabel">Kullanıcı Rolleri</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6 id="viewUserName" class="font-weight-bold"></h6>
+                </div>
+                <div class="mb-3">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        Bu kullanıcıya atanmış roller aşağıda listelenmiştir. Rolü kaldırmak için "Kaldır" butonuna tıklayın.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div id="userRolesList" class="list-group">
+                        <!-- Roller burada listelenecek -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-success" id="addUserRoleBtn">Yeni Rol Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // CSRF token'ı sadece bir kez tanımla
+        const csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
+        // Initialize DataTables
+        $('#rolesTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Turkish.json"
+            },
+            "pageLength": 10,
+            "order": [[0, "asc"]]
+        });
+        
+        $('#usersTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Turkish.json"
+            },
+            "pageLength": 10,
+            "order": [[0, "asc"]]
+        });
+        
+        // Toastr configuration
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "3000",
+            "extendedTimeOut": "1000"
+        };
+        
+        // Rol düzenleme modalını aç
+        $(document).on('click', '.btn-info[data-role-id]', function() {
+            const roleId = $(this).data('role-id');
+            const roleName = $(this).closest('tr').find('td:first').text();
+            
+            // Modal başlığını güncelle
+            $('#editRoleModalLabel').html(`<i class="fas fa-user-cog me-2"></i>Rol Düzenle - ${roleName}`);
+            
+            // Rolün atandığı kullanıcıları yükle
+            $.ajax({
+                url: `/admin/get-role-users/${roleId}`,
+                type: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        let html = '<div class="list-group">';
+                        
+                        if (response.users && response.users.length > 0) {
+                            response.users.forEach(function(user) {
+                                html += `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>${user.username}</span>
+                                        <button class="btn btn-sm btn-danger revoke-user" data-user-id="${user.id}">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            html += `
+                                <div class="list-group-item text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>Henüz bir kullanıcı atanmamış
+                                </div>
+                            `;
+                        }
+                        
+                        html += '</div>';
+                        $('#roleUserList').html(html);
+                    } else {
+                        $('#roleUserList').html(`
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>${response.message || 'Kullanıcılar yüklenemedi'}
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    $('#roleUserList').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Sunucu bağlantısında bir hata oluştu
+                        </div>
+                    `);
+                }
+            });
+            
+            // Modalı göster
+            const editRoleModal = new bootstrap.Modal(document.getElementById('editRoleModal'));
+            editRoleModal.show();
+        });
+
+        // Yeni kullanıcı ata
+        $(document).on('click', '#assignNewUser', function() {
+            const roleId = $('.edit-role.active').data('role-id');
+            const userId = $('#newUserSelect').val();
+            
+            if (!userId) {
+                toastr.warning('Lütfen bir kullanıcı seçin');
+                return;
+            }
+            
+            $.ajax({
+                url: '/admin/assign-role',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                data: JSON.stringify({
+                    user_id: userId,
+                    role_id: roleId,
+                    csrf_token: csrfToken
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message || 'Kullanıcı başarıyla atandı');
+                        // Kullanıcıları yeniden yükle
+                        $('.edit-role.active').click();
+                    } else {
+                        toastr.error(response.message || 'Bir hata oluştu');
+                    }
+                },
+                error: function() {
+                    toastr.error('Sunucu bağlantısında bir hata oluştu');
+                }
+            });
+        });
+
+        // Kullanıcıyı rolden kaldır
+        $(document).on('click', '.revoke-user', function() {
+            const userId = $(this).data('user-id');
+            const roleId = $('.edit-role.active').data('role-id');
+            
+            if (confirm('Bu kullanıcıyı rolden kaldırmak istediğinizden emin misiniz?')) {
+                $.ajax({
+                    url: '/admin/revoke-role',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    data: JSON.stringify({
+                        user_id: userId,
+                        role_id: roleId,
+                        csrf_token: csrfToken
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message || 'Kullanıcı başarıyla kaldırıldı');
+                            // Kullanıcıları yeniden yükle
+                            $('.edit-role.active').click();
+                        } else {
+                            toastr.error(response.message || 'Bir hata oluştu');
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Sunucu bağlantısında bir hata oluştu');
+                    }
+                });
+            }
+        });
+
+        // İzinleri görüntüle
+        $(document).on('click', '.btn-warning[data-role-id]', function() {
+            const roleId = $(this).data('role-id');
+            const roleName = $(this).closest('tr').find('td:first').text();
+            
+            // Modal başlığını güncelle
+            $('#permissionsModalLabel').html(`<i class="fas fa-key me-2"></i>İzinler - ${roleName}`);
+            
+            // Rolün izinlerini yükle
+            $.ajax({
+                url: `/admin/get-role-permissions/${roleId}`,
+                type: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        let html = '<div class="list-group">';
+                        
+                        if (response.permissions && response.permissions.length > 0) {
+                            response.permissions.forEach(function(permission) {
+                                html += `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>${permission.name}</span>
+                                        <span class="badge bg-primary">${permission.description}</span>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            html += `
+                                <div class="list-group-item text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>Henüz bir izin atanmamış
+                                </div>
+                            `;
+                        }
+                        
+                        html += '</div>';
+                        $('#rolePermissionsList').html(html);
+                    } else {
+                        $('#rolePermissionsList').html(`
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>${response.message || 'İzinler yüklenemedi'}
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    $('#rolePermissionsList').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Sunucu bağlantısında bir hata oluştu
+                        </div>
+                    `);
+                }
+            });
+            
+            // Modalı göster
+            const permissionsModal = new bootstrap.Modal(document.getElementById('permissionsModal'));
+            permissionsModal.show();
+        });
+
+        // İzin durumunu güncelle
+        $(document).on('change', '.permission-checkbox', function() {
+            const permissionId = $(this).data('permission-id');
+            const roleId = $('.view-permissions.active').data('role-id');
+            const granted = $(this).is(':checked');
+            
+            $.ajax({
+                url: '/admin/update-role-permissions',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                data: JSON.stringify({
+                    role_id: roleId,
+                    permission_id: permissionId,
+                    granted: granted,
+                    csrf_token: csrfToken
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message || 'İzin durumu güncellendi');
+                    } else {
+                        toastr.error(response.message || 'Bir hata oluştu');
+                        // İzin durumunu eski haline getir
+                        $(this).prop('checked', !granted);
+                    }
+                },
+                error: function() {
+                    toastr.error('Sunucu bağlantısında bir hata oluştu');
+                    // İzin durumunu eski haline getir
+                    $(this).prop('checked', !granted);
+                }
+            });
+        });
+
+        // Rol sil
+        $(document).on('click', '.delete-role', function() {
+            const roleId = $(this).data('role-id');
+            const roleName = $(this).closest('tr').find('td:first').text();
+            
+            if (confirm(`"${roleName}" rolünü silmek istediğinizden emin misiniz?`)) {
+                $.ajax({
+                    url: `/admin/delete-role/${roleId}`,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message || 'Rol başarıyla silindi');
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            toastr.error(response.message || 'Bir hata oluştu');
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Sunucu bağlantısında bir hata oluştu');
+                    }
+                });
+            }
+        });
+
+        // Yeni rol ekle
+        $('#saveRoleBtn').click(function() {
+            const name = $('#roleName').val();
+            const description = $('#roleDescription').val();
+            
+            if (!name) {
+                toastr.warning('Lütfen bir rol adı girin');
+                return;
+            }
+            
+            $.ajax({
+                url: '/admin/add-role',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                data: JSON.stringify({
+                    name: name,
+                    description: description,
+                    csrf_token: csrfToken
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message || 'Rol başarıyla eklendi');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message || 'Bir hata oluştu');
+                    }
+                },
+                error: function() {
+                    toastr.error('Sunucu bağlantısında bir hata oluştu');
+                }
+            });
+        });
+
+        // User Role Management
+        // Show assign role modal
+        $('.edit-user-roles-btn').click(function() {
+            const userId = $(this).data('id');
+            const username = $(this).data('username');
+            
+            $('#viewUserName').text(`"${username}" Kullanıcısının Rolleri`);
+            $('#userRolesList').empty();
+            
+            // Get user's roles
+            $.ajax({
+                url: `/admin/get-user-roles/${userId}`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        if (response.roles.length === 0) {
+                            $('#userRolesList').append('<div class="list-group-item">Bu kullanıcıya atanmış rol bulunamadı.</div>');
+                        } else {
+                            response.roles.forEach(function(role) {
+                                $('#userRolesList').append(`
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>${role.name}</span>
+                                        <button class="btn btn-sm btn-danger revoke-role-btn" 
+                                                data-user-id="${userId}" 
+                                                data-role-id="${role.id}">
+                                            <i class="fas fa-trash"></i> Kaldır
+                                        </button>
+                                    </div>
+                                `);
+                            });
+                        }
+                        
+                        // Add role selection dropdown
+                        $('#userRolesList').append(`
+                            <div class="list-group-item">
+                                <div class="input-group">
+                                    <select class="form-select" id="newRoleSelect">
+                                        <option value="">Yeni rol seçin...</option>
+                                        {% for role in roles %}
+                                        <option value="{{ role.id }}">{{ role.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-primary" id="assignNewRole" data-user-id="${userId}">
+                                        <i class="fas fa-plus"></i> Ekle
+                                    </button>
+                                </div>
+                            </div>
+                        `);
+                        
+                        // Bootstrap 5 modal show
+                        var myModal = new bootstrap.Modal(document.getElementById('userRolesModal'));
+                        
+                        // Add event listener for modal close
+                        $('#userRolesModal').on('hidden.bs.modal', function () {
+                            window.location.reload();
+                        });
+                        
+                        myModal.show();
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error:", xhr.responseText);
+                    toastr.error('Kullanıcı rolleri alınırken bir hata oluştu.');
+                }
+            });
+        });
+
+        // Assign new role to user
+        $(document).on('click', '#assignNewRole', function() {
+            const userId = $(this).data('user-id');
+            const roleId = $('#newRoleSelect').val();
+            const roleName = $('#newRoleSelect option:selected').text();
+            
+            if (!roleId) {
+                toastr.warning('Lütfen bir rol seçin');
+                return;
+            }
+            
+            // Check if trying to assign excel_export or edit_responsible_person role
+            if (roleName === 'excel_export' || roleName === 'edit_responsible_person') {
+                // First check if the user has scenario_viewer role
+                $.ajax({
+                    url: `/admin/get-user-roles/${userId}`,
+                    type: 'GET',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            const hasScenarioViewer = response.roles.some(role => role.name === 'scenario_viewer');
+                            
+                            if (!hasScenarioViewer) {
+                                const roleDisplayName = roleName === 'excel_export' ? 'Excel Export' : 'Sorumlu Kişi Güncelleme';
+                                toastr.error(`Senaryo Görüntüleme rolü olmadan ${roleDisplayName} rolü eklenemez. Lütfen önce Senaryo Görüntüleme (scenario_viewer) rolünü ekleyin.`);
+                                return;
+                            }
+                            
+                            // If user has scenario_viewer, proceed with role assignment
+                            proceedWithRoleAssignment(userId, roleId);
+                        } else {
+                            toastr.error(response.message || 'Kullanıcı rolleri alınamadı.');
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Kullanıcı rolleri alınamadı.');
+                    }
+                });
+            } else {
+                // For other roles, proceed directly
+                proceedWithRoleAssignment(userId, roleId);
+            }
+        });
+        
+        function proceedWithRoleAssignment(userId, roleId) {
+            // Show loading indicator
+            toastr.info('Rol atanıyor, lütfen bekleyin...');
+            
+            $.ajax({
+                url: '/admin/assign-role',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                data: JSON.stringify({
+                    user_id: userId,
+                    role_id: roleId,
+                    csrf_token: csrfToken
+                }),
+                success: function(response) {
+                    console.log('Response:', response);
+                    if (response.success) {
+                        toastr.success(response.message || 'Rol başarıyla atandı');
+                        // Reload the modal content
+                        $(`.edit-user-roles-btn[data-id="${userId}"]`).click();
+                    } else {
+                        toastr.error(response.message || 'Bir hata oluştu');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ajax error:', {xhr, status, error});
+                    console.log('Response text:', xhr.responseText);
+                    
+                    // Try to parse the response text as JSON
+                    let errorMessage = 'Sunucu bağlantısında bir hata oluştu';
+                    try {
+                        if (xhr.responseText) {
+                            const responseData = JSON.parse(xhr.responseText);
+                            console.log('Parsed response data:', responseData);
+                            if (responseData && responseData.message) {
+                                errorMessage = responseData.message;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                    }
+                    
+                    // Show the error message
+                    toastr.error(errorMessage);
+                }
+            });
+        }
+
+        // Revoke role from user
+        $(document).on('click', '.revoke-role-btn', function() {
+            const userId = $(this).data('user-id');
+            const roleId = $(this).data('role-id');
+            
+            if (confirm('Bu rolü kullanıcıdan kaldırmak istediğinizden emin misiniz?')) {
+                $.ajax({
+                    url: '/admin/revoke-role',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    data: JSON.stringify({
+                        user_id: userId,
+                        role_id: roleId,
+                        csrf_token: csrfToken
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message || 'Rol başarıyla kaldırıldı');
+                            // Reload the modal content
+                            $(`.edit-user-roles-btn[data-id="${userId}"]`).click();
+                        } else {
+                            toastr.error(response.message || 'Bir hata oluştu');
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Sunucu bağlantısında bir hata oluştu');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

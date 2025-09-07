@@ -1,0 +1,960 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- İstatistik Kartları -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Toplam Kullanıcı</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Yönetici Sayısı</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ admin_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-shield fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Microsoft Hesapları</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ms_users_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fab fa-microsoft fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">İzinli Domain Sayısı</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ allowed_emails|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-at fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                       <div><br>
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Not:</strong> Bu sayfa sadece kullanıcı hesaplarının yönetimi içindir. Kullanıcılara rol atama ve yetkilendirme işlemleri <a href="{{ url_for('manage_roles') }}" class="alert-link">Rol Yönetimi</a> sayfasından yapılmalıdır.
+                        </div>
+                        <div>
+                        <button class="btn btn-primary btn-sm" id="addUserBtn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                            <i class="fas fa-user-plus fa-sm"></i> Yeni Kullanıcı Ekle
+                        </button>
+                       </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Kullanıcı Listesi -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="usersTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Kullanıcı Adı</th>
+                                    <th>E-posta</th>
+                                    <th>Durum</th>
+                                    <th>Yönetici</th>
+                                    <th>Son Giriş</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if user.is_pending %}
+                                                <span class="text-muted">{{ user.username }}</span>
+                                                <span class="badge badge-info ml-2">Henüz Giriş Yapmadı</span>
+                                            {% else %}
+                                                {{ user.username }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.is_pending %}
+                                            <span class="badge bg-warning">Bekliyor</span>
+                                        {% else %}
+                                            {% if user.is_active %}
+                                            <span class="badge bg-success">Aktif</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Pasif</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_admin %}
+                                        <span class="badge bg-primary">Yönetici</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Kullanıcı</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_pending %}
+                                            <span class="text-muted">-</span>
+                                        {% else %}
+                                            {{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Hiç giriş yapmadı' }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if not user.is_pending %}
+                                                {% if not user.id == current_user.id %}
+                                                    {% if user.is_oauth_user %}
+                                                    <button class="btn btn-sm btn-danger delete-microsoft" 
+                                                            data-id="{{ user.id }}" 
+                                                            title="Microsoft Hesabını Sil">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    {% if user.username != 'admin' %}
+                                                    <button class="btn btn-sm btn-danger delete-user" 
+                                                            data-id="{{ user.id }}" 
+                                                            title="Kullanıcıyı Sil">
+                                                        <i class="fas fa-user-times"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kullanıcı Ekleme Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title" id="addUserModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Yeni Kullanıcı Ekle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <form id="addUserForm" method="POST" action="{{ url_for('add_user') }}">
+                    {% set form = get_empty_form() %}
+                    {{ form.csrf_token }}
+                    <!-- Hesap Türü Seçimi -->
+                    <div class="account-type-selector mb-3">
+                        <label class="form-label fw-bold mb-2">
+                            <i class="fas fa-user-tag me-2"></i>Hesap Türü
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="account-type-card local-account active" data-type="local">
+                                    <div class="card h-100 border rounded">
+                                        <div class="card-body text-center p-2">
+                                            <i class="fas fa-user-circle h4 mb-2"></i>
+                                            <h6 class="card-title mb-1">Yerel</h6>
+                                            <p class="card-text small text-muted mb-0">Kullanıcı adı ve şifre</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="account-type-card microsoft-account" data-type="microsoft">
+                                    <div class="card h-100 border rounded">
+                                        <div class="card-body text-center p-2">
+                                            <i class="fab fa-microsoft h4 mb-2"></i>
+                                            <h6 class="card-title mb-1">Microsoft</h6>
+                                            <p class="card-text small text-muted mb-0">E-posta ile giriş</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="auth_method" id="selectedAccountType" value="local">
+                    </div>
+
+                    <!-- Kullanıcı Bilgileri - Ortak Alanlar -->
+                    <div class="mb-2">
+                        <label for="email" class="form-label fw-bold">
+                            <i class="fas fa-envelope me-2"></i>E-posta
+                        </label>
+                        <input type="email" class="form-control form-control-sm" id="email" name="email" required>
+                    </div>
+                    
+                    <!-- Add a class to the full_name div for easier targeting -->
+                    <div class="mb-2" id="full_name_container">
+                        <label for="full_name" class="form-label fw-bold">
+                            <i class="fas fa-user me-2"></i>Tam İsim
+                        </label>
+                        <input type="text" class="form-control form-control-sm" id="full_name" name="full_name" required>
+                    </div>
+                    
+                    <!-- Yerel Hesap Alanları -->
+                    <div id="localAccountFields">
+                        <div class="mb-2">
+                            <label for="username" class="form-label fw-bold">
+                                <i class="fas fa-user me-2"></i>Kullanıcı Adı
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="username" name="username">
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="password" class="form-label fw-bold">
+                                <i class="fas fa-key me-2"></i>Şifre
+                            </label>
+                            <input type="password" class="form-control form-control-sm" id="password" name="password">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label for="confirm_password" class="form-label fw-bold">
+                                <i class="fas fa-key me-2"></i>Şifre (Tekrar)
+                            </label>
+                            <input type="password" class="form-control form-control-sm" id="confirm_password" name="confirm_password">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>İptal
+                </button>
+                <button type="submit" form="addUserForm" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check me-2"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rol Atama Modal -->
+<div class="modal fade" id="assignRoleModal" tabindex="-1" aria-labelledby="assignRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignRoleModalLabel">Rol Ata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div id="userRoles">
+                    {% set form = get_empty_form() %}
+                    {{ form.csrf_token }}
+                    <!-- Kullanıcının rolleri buraya dinamik olarak yüklenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
+<script>
+$(document).ready(function() {
+    console.log("Document ready, initializing components...");
+    
+    // Get CSRF token from form input
+    const csrfToken = $('input[name="csrf_token"]').val();
+    
+    // Add CSRF token to all AJAX requests
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken || $('meta[name="csrf-token"]').attr('content'));
+            }
+        }
+    });
+    
+    // Sayfa yüklendiğinde tüm modal backdrop'ları temizle
+    cleanupModals();
+    
+    // Account type card stilleri
+    $('<style>')
+        .prop('type', 'text/css')
+        .html(`
+            .account-type-card {
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .account-type-card .card {
+                border: 2px solid #e9ecef;
+                transition: all 0.2s ease;
+            }
+            .account-type-card:hover .card {
+                border-color: #0d6efd;
+                transform: translateY(-2px);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            }
+            .account-type-card.active .card {
+                border-color: #0d6efd;
+                background-color: rgba(13, 110, 253, 0.05);
+                transform: translateY(-2px);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            }
+            /* Modal açıkken kaydırma çubuğunu koru */
+            body.modal-open {
+                overflow: auto !important;
+                padding-right: 0 !important;
+            }
+            /* Modal backdrop stilini düzelt */
+            .modal-backdrop {
+                opacity: 0.5;
+            }
+        `)
+        .appendTo('head');
+
+    // Tüm modalları temizleyen yardımcı fonksiyon
+    function cleanupModals() {
+        console.log("Modallar temizleniyor");
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('padding-right', '');
+        
+        // Sayfanın kaydırılabilirliğini geri yükle
+        $('body').css('overflow', 'auto');
+        
+        // Varsa modal açılırken oluşturulan diğer CSS stillerini de temizle
+        $('body').css('height', '');
+        $('body').css('position', '');
+    }
+    
+    // Modal açılma olaylarında overflow'u koru
+    $('.modal').on('show.bs.modal', function (e) {
+        console.log('Modal açılıyor, overflow ayarlanıyor');
+        setTimeout(function() {
+            // Bootstrap'in overflow'u gizlemesini önle
+            $('body').css('overflow', 'auto');
+            $('body').css('padding-right', '0');
+        }, 10);
+    });
+
+    // Modal açılma olaylarını dinle ve backdrop'ları kontrol et
+    $('.modal').on('shown.bs.modal', function (e) {
+        console.log('Modal açıldı, backdrop kontrol ediliyor');
+        // Birden fazla backdrop varsa fazla olanları kaldır
+        if ($('.modal-backdrop').length > 1) {
+            $('.modal-backdrop:not(:first)').remove();
+        }
+        
+        // Sayfanın kaydırılabilirliğini koru
+        $('body').css('overflow', 'auto');
+        $('body').css('padding-right', '0');
+        
+        // Modal içeriğinin düzgün scroll olabilmesi için
+        $(this).css('overflow-y', 'auto');
+    });
+
+    // DataTables initialization
+    $('#usersTable').DataTable({
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Turkish.json"
+        },
+        "order": [[0, "asc"]],
+        "pageLength": 25
+    });
+
+    // Tüm modalların kapanma olayını izle ve backdrop'ları temizle
+    $('.modal').on('hidden.bs.modal', function (e) {
+        console.log('Modal kapandı, backdrop temizleniyor');
+        setTimeout(cleanupModals, 100);
+    });
+
+    // ESC tuşuna basıldığında modalları temizle
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape') {
+            setTimeout(function() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                $('.modal').modal('hide');
+            }, 300);
+        }
+    });
+
+    // Yeni kullanıcı ekleme modal açıldığında
+    $('#addUserModal').on('show.bs.modal', function (e) {
+        console.log("Kullanıcı ekle modalı açılıyor");
+        
+        // Form alanlarını sıfırla
+        $('#addUserForm')[0].reset();
+        
+        // Local hesap seçeneğini aktifleştir
+        $('.account-type-card').removeClass('active');
+        $('.account-type-card[data-type="local"]').addClass('active');
+        $('#selectedAccountType').val('local');
+        
+        // İlgili alanları göster/gizle
+        $('#localAccountFields').show();
+        $('#full_name_container').show();
+        
+        // Gereklilik durumlarını ayarla
+        $('#username, #password, #confirm_password, #full_name').prop('required', true);
+    });
+    
+    // Modal kapatıldığında formu sıfırla ve backdrop'u temizle
+    $('#addUserModal').on('hidden.bs.modal', function () {
+        $('#addUserForm')[0].reset();
+        $('.account-type-card').removeClass('active');
+        $('.account-type-card[data-type="local"]').addClass('active');
+        $('#selectedAccountType').val('local');
+        $('#localAccountFields').show();
+        $('#full_name_container').show();
+        $('#username, #password, #confirm_password, #full_name').prop('required', true);
+    });
+
+    // Kullanıcı Form gönderimi
+    $('#addUserForm').submit(function(e) {
+        e.preventDefault(); // Formun normal gönderimini engelle
+        console.log("Kullanıcı ekleme formu gönderiliyor...");
+        
+        const authMethod = $('#selectedAccountType').val();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Ortak alanları kontrol et
+        if (!$('#email').val()) {
+            isValid = false;
+            errorMessage = 'E-posta adresi gerekli';
+        }
+        
+        // Hesap türüne göre ek doğrulama
+        if (authMethod === 'local') {
+            if (!$('#full_name').val()) {
+                isValid = false;
+                errorMessage = 'Tam isim gerekli';
+            } else if (!$('#username').val()) {
+                isValid = false;
+                errorMessage = 'Kullanıcı adı gerekli';
+            } else if (!$('#password').val()) {
+                isValid = false;
+                errorMessage = 'Şifre gerekli';
+            } else if (!$('#confirm_password').val()) {
+                isValid = false;
+                errorMessage = 'Şifre tekrarı gerekli';
+            } else if ($('#password').val() !== $('#confirm_password').val()) {
+                isValid = false;
+                errorMessage = 'Şifreler eşleşmiyor';
+            }
+        }
+        
+        if (!isValid) {
+            toastr.error(errorMessage);
+            return;
+        }
+        
+        // Loading göstergesi
+        const submitBtn = $('button[type="submit"][form="addUserForm"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>İşleniyor...');
+        
+        // Form verilerini topla
+        const formData = new FormData(this);
+        
+        // AJAX isteği
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRFToken': $('input[name="csrf_token"]:first').val(),
+                'X-Requested-With': 'XMLHttpRequest'  // AJAX isteği olduğunu belirt
+            },
+            success: function(response) {
+                console.log("Kullanıcı ekleme cevabı:", response);
+                
+                if (response && response.success) {
+                    // Başarılı
+                    toastr.success(response.message);
+                    
+                    // Modal'ı kapat
+                    var modalElement = document.getElementById('addUserModal');
+                    var modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    } else {
+                        $('#addUserModal').modal('hide');
+                    }
+                    
+                    // Sayfayı yenile
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    // Başarısız
+                    toastr.error(response.message || 'Bir hata oluştu');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log("Kullanıcı ekleme hatası:", xhr, status, error);
+                
+                // Hata durumunda
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    toastr.error(response.message || 'Bir hata oluştu');
+                } catch (e) {
+                    // JSON parse edilemezse
+                    toastr.error('Sunucu bağlantısında bir hata oluştu: ' + status);
+                    console.error('XHR Durumu:', status, 'Hata:', error, 'Yanıt:', xhr.responseText);
+                }
+            },
+            complete: function() {
+                // İşlem tamamlandığında butonu eski haline getir
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // Rol atama işlemleri
+    $(document).on('click', '.assign-role', function() {
+        var userId = $(this).data('user-id');
+        var isPending = userId.toString().startsWith('pending_');
+        
+        console.log("Rol atama butonuna tıklandı, ID:", userId, "isPending:", isPending);
+        
+        if (isPending) {
+            // Kullanıcı henüz giriş yapmamış olsa bile rol atanabilir
+            var email = userId.replace('pending_', '').replace('_at_', '@');
+            
+            // Rol atama formu
+            var html = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Bu kullanıcı henüz giriş yapmamış. Rol atandığında, kullanıcı ilk giriş yaptığında otomatik olarak aktif olacaktır.
+                    </div>
+                <div class="mt-3">
+                    <div class="input-group">
+                        <select class="form-control" id="roleSelect">
+                            <option value="">Rol seçin...</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" id="assignPendingRole" data-email="${email}">
+                                <i class="fas fa-plus"></i> Ata
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#userRoles').html(html);
+        } else {
+            console.log(`Kullanıcı rolleri alınıyor, userId: ${userId}`);
+            
+            // Mevcut kullanıcının rollerini yükle
+            $.ajax({
+                url: `/admin/get-user-roles/${userId}`,
+                type: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    console.log("Rol listeleme cevabı:", response);
+                    
+                    if (response.success) {
+                        var html = '<div class="list-group">';
+                        
+                        if (response.roles && response.roles.length > 0) {
+                            response.roles.forEach(function(role) {
+                                html += `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${role.name}
+                                    <button class="btn btn-sm btn-danger revoke-role" data-user="${userId}" data-role="${role.id}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                `;
+                            });
+                        }
+                        
+                        html += '</div>';
+                        
+                        html += `
+                            <div class="mt-3">
+                                <div class="input-group">
+                                    <select class="form-control" id="roleSelect">
+                                        <option value="">Rol seçin...</option>
+                                        {% for role in roles %}
+                                        <option value="{{ role.id }}">{{ role.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="input-group-append">
+                                            <button class="btn btn-primary" id="assignExistingRole" data-user="${userId}">
+                                            <i class="fas fa-plus"></i> Ata
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        $('#userRoles').html(html);
+                    } else {
+                        $('#userRoles').html(`
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>${response.message || 'Kullanıcı rolleri alınamadı'}
+                            </div>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log("Rol listeleme hatası:", xhr, status, error);
+                    $('#userRoles').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Sunucu bağlantısında bir hata oluştu
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Rol modalını göster
+        var assignRoleModal = new bootstrap.Modal(document.getElementById('assignRoleModal'));
+        assignRoleModal.show();
+    });
+
+    // Kullanıcı silme işlemi
+    $(document).on('click', '.delete-user', function() {
+        const userId = $(this).data('id');
+        const username = $(this).closest('tr').find('td:first').text();
+        
+        // Prevent deleting admin user
+        if (username === 'admin') {
+            toastr.warning('Sistem yöneticisi (admin) kullanıcısı silinemez');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu kullanıcıyı silmek istediğinizden emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, sil!',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/delete_user/${userId}`,
+                    type: 'POST',
+                    data: {
+                        csrf_token: $('input[name="csrf_token"]:first').val()
+                    },
+                    headers: {
+                        'X-CSRFToken': $('input[name="csrf_token"]:first').val(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Silindi!',
+                                text: 'Kullanıcı başarıyla silindi.',
+                                icon: 'success',
+                                confirmButtonText: 'Tamam'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Hata!',
+                                text: response.message || 'Kullanıcı silinirken bir hata oluştu.',
+                                icon: 'error',
+                                confirmButtonText: 'Tamam'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire({
+                            title: 'Hata!',
+                            text: 'Bir hata oluştu.',
+                            icon: 'error',
+                            confirmButtonText: 'Tamam'
+                        });
+                        console.error('Error:', error);
+                    }
+                });
+            }
+        });
+    });
+
+    // Microsoft hesabı silme işlemi
+    $(document).on('click', '.delete-microsoft', function() {
+        const userId = $(this).data('id');
+        
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Microsoft hesabını kaldırmak istediğinizden emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, kaldır!',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/remove_microsoft_account/${userId}`,
+                    type: 'POST',
+                    data: {
+                        csrf_token: $('input[name="csrf_token"]:first').val()
+                    },
+                    headers: {
+                        'X-CSRFToken': $('input[name="csrf_token"]:first').val(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Kaldırıldı!',
+                                text: 'Microsoft hesabı başarıyla kaldırıldı.',
+                                icon: 'success',
+                                confirmButtonText: 'Tamam'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Hata!',
+                                text: response.message || 'Microsoft hesabı kaldırılırken bir hata oluştu.',
+                                icon: 'error',
+                                confirmButtonText: 'Tamam'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire({
+                            title: 'Hata!',
+                            text: 'Bir hata oluştu.',
+                            icon: 'error',
+                            confirmButtonText: 'Tamam'
+                        });
+                        console.error('Error:', error);
+                    }
+                });
+            }
+        });
+    });
+
+    // Toggle admin button click event
+    $(document).on('click', '.toggle-admin', function() {
+        const userId = $(this).data('id');
+        const username = $(this).closest('tr').find('td:first').text();
+        
+        // Prevent changing admin user
+        if (username === 'admin') {
+            toastr.warning('Sistem yöneticisi (admin) kullanıcısının yetkisi değiştirilemez');
+            return;
+        }
+        
+        if (confirm('Bu kullanıcının yönetici durumunu değiştirmek istediğinizden emin misiniz?')) {
+            $.ajax({
+                url: `/toggle_admin/${userId}`,
+                type: 'GET',
+                success: function(response) {
+                    toastr.success('Yönetici durumu başarıyla değiştirildi');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                },
+                error: function() {
+                    toastr.error('İşlem sırasında bir hata oluştu');
+                }
+            });
+        }
+    });
+
+    // Toggle status button click event
+    $(document).on('click', '.toggle-status', function() {
+        const userId = $(this).data('id');
+        const username = $(this).closest('tr').find('td:first').text();
+        
+        // Prevent changing admin user
+        if (username === 'admin') {
+            toastr.warning('Sistem yöneticisi (admin) kullanıcısının durumu değiştirilemez');
+            return;
+        }
+        
+        if (confirm('Bu kullanıcının aktif/pasif durumunu değiştirmek istediğinizden emin misiniz?')) {
+            $.ajax({
+                url: `/toggle_status/${userId}`,
+                type: 'POST',
+                data: {
+                    csrf_token: $('input[name="csrf_token"]:first').val()
+                },
+                success: function(response) {
+                    toastr.success('Kullanıcı durumu başarıyla değiştirildi');
+                    setTimeout(function() {
+                    location.reload();
+                    }, 1000);
+                },
+                error: function() {
+                    toastr.error('İşlem sırasında bir hata oluştu');
+                }
+            });
+        }
+    });
+
+    // Hesap türü kartlarına tıklama olayını yeniden düzenle (event delegation kullanarak)
+    $(document).on('click', '.account-type-card', function() {
+        console.log("Hesap türü kartına tıklandı:", $(this).data('type'));
+        const type = $(this).data('type');
+        
+        // Tüm kartlardan active sınıfını kaldır
+        $('.account-type-card').removeClass('active');
+        
+        // Tıklanan kartı aktif et
+        $(this).addClass('active');
+        
+        // Hesap türünü güncelle
+        $('#selectedAccountType').val(type);
+        
+        // Form alanlarını göster/gizle
+        if (type === 'local') {
+            $('#localAccountFields').show();
+            $('#full_name_container').show();
+            // Yerel kullanıcı alanlarını zorunlu yap
+            $('#username, #password, #confirm_password, #full_name').prop('required', true);
+        } else {
+            $('#localAccountFields').hide();
+            $('#full_name_container').hide();
+            // Microsoft kullanıcısı için yerel alanları ve full_name'i zorunlu olmaktan çıkar
+            $('#username, #password, #confirm_password, #full_name').prop('required', false);
+        }
+    });
+
+    // Rol listesini güncelleme fonksiyonu
+    function updateRolesList(userId, roles) {
+        var html = '<div class="list-group">';
+        
+        if (roles && roles.length > 0) {
+            roles.forEach(function(role) {
+                html += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        ${role.name}
+                        <button class="btn btn-sm btn-danger revoke-role" data-user="${userId}" data-role="${role.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        } else {
+            html += `
+                <div class="list-group-item text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>Henüz bir rol atanmamış
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        html += `
+            <div class="mt-3">
+                <div class="input-group">
+                    <select class="form-control" id="roleSelect">
+                        <option value="">Rol seçin...</option>
+                        {% for role in roles %}
+                        <option value="{{ role.id }}">{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" id="assignExistingRole" data-user="${userId}">
+                            <i class="fas fa-plus"></i> Ata
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#userRoles').html(html);
+    }
+
+    // Rol listesini yeniden yükleme fonksiyonu
+    function reloadUserRoles(userId) {
+        console.log("Roller yeniden yükleniyor, userId:", userId);
+        
+        $.ajax({
+            url: `/admin/get-user-roles/${userId}`,
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                console.log("Rol listeleme cevabı:", response);
+                
+                if (response.success) {
+                    updateRolesList(userId, response.roles);
+                } else {
+                    toastr.error(response.message || 'Roller güncellenemedi');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log("Rol listeleme hatası:", xhr, status, error);
+                toastr.error('Roller güncellenirken bir hata oluştu');
+            }
+        });
+    }
+
+    // Forcefix - modal ve backdrop'ları temizle
+    function forceCleanupModals() {
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('padding-right', '');
+        $('.modal').modal('hide');
+    }
+
+    // Domain formatı kontrolü - daha esnek bir format
+    function validateDomain(domain) {
+        // Basit domain kontrolü: en az bir nokta içermeli ve boşluk olmamalı
+        return domain.includes('.') && !domain.includes(' ');
+    }
+});
+</script>
+{% endblock %} 

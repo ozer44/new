@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Event Rules - {{ connection.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Event Rules - {{ connection.name }}</h1>
+            <a href="{{ url_for('rest_api_connections') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Geri Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="eventRulesTable" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Senaryo Adı</th>
+                                    <th>Tekrar</th>
+                                    <th>Tekrar Oranı</th>
+                                    <th>İşlem Tipi</th>
+                                    <th>Tip</th>
+                                    <th>Adım Sayısı</th>
+                                    <th>Kaynak</th>
+                                    <th>Hedef</th>
+                                    <th>Durum</th>
+                                    <th>Klasör ID</th>
+                                    <th>Departman</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in event_rules %}
+                                <tr style="cursor: pointer;" onclick="window.location.href='{{ url_for('event_rule_detail', connection_id=connection.id, rule_id=rule.id) }}'">
+                                    <td>{{ rule.attributes.info.Name if rule.attributes.info.Name else 'İsimsiz' }}</td>
+                                    <td>
+                                        {% if rule.type in ['On IP Added to Ban List Rule', 'On Service Started Rule', 'On Service Stopped Rule', 'On Site Started Rule', 'On Site Stop Rule', 'ServiceStarted'] %}
+                                            Triggered
+                                        {% elif rule.attributes.trigger and rule.attributes.trigger.TimerParams %}
+                                            {% set recurrence = rule.attributes.trigger.TimerParams.Recurrence %}
+                                            {% if recurrence == 'Continually' %}
+                                                Sürekli
+                                            {% elif recurrence == 'Daily' %}
+                                                Günlük
+                                            {% elif recurrence == 'Weekly' %}
+                                                Haftalık
+                                            {% elif recurrence == 'Monthly' %}
+                                                Aylık
+                                            {% else %}
+                                                {{ recurrence }}
+                                            {% endif %}
+                                        {% else %}
+                                            Tanımlanmamış
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.attributes.trigger and rule.attributes.trigger.TimerParams %}
+                                            {% set repeat_pattern = rule.attributes.trigger.TimerParams.RepeatPattern %}
+                                            {% set repeat_rate = rule.attributes.trigger.TimerParams.RepeatRate %}
+                                            {% if repeat_pattern == 'Hours' and repeat_rate %}
+                                                {{ repeat_rate }} Hours
+                                            {% elif repeat_pattern == 'Minutes' and repeat_rate %}
+                                                {{ repeat_rate }} Minutes
+                                            {% elif repeat_rate %}
+                                                {{ repeat_rate }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.attributes.statements and rule.attributes.statements.StatementsList %}
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% for statement in rule.attributes.statements.StatementsList %}
+                                                    {% if statement.ActionStatement and statement.ActionStatement.Action %}
+                                                        {% for action_type, action_data in statement.ActionStatement.Action.items() %}
+                                                            {% if action_type == 'UploadAction' %}
+                                                                <span class="badge bg-primary">Upload</span>
+                                                            {% elif action_type == 'DownloadAction' %}
+                                                                <span class="badge bg-info">Download</span>
+                                                            {% elif action_type == 'MonitorAction' %}
+                                                                <span class="badge bg-warning">Monitor</span>
+                                                            {% elif action_type == 'WindowsEventAction' %}
+                                                                <span class="badge bg-purple">Windows Event</span>
+                                                            {% elif action_type == 'WindowsServiceAction' %}
+                                                                <span class="badge bg-indigo">Windows Service</span>
+                                                            {% elif action_type == 'PowerShellScriptAction' %}
+                                                                <span class="badge bg-success">PowerShell Script</span>
+                                                            {% elif action_type == 'WindowsEventLogAction' %}
+                                                                <span class="badge bg-warning">Windows Event Log</span>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Tanımlanmamış</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.type in ['On IP Added to Ban List Rule', 'On Service Started Rule', 'On Service Stopped Rule', 'On Site Started Rule', 'On Site Stop Rule', 'ServiceStarted'] %}
+                                            Event
+                                        {% else %}
+                                            Timer
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.attributes.statements and rule.attributes.statements.StatementsList %}
+                                            {{ rule.attributes.statements.StatementsList|length }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.attributes.statements and rule.attributes.statements.StatementsList %}
+                                            {% for statement in rule.attributes.statements.StatementsList %}
+                                                {% if statement.ActionStatement %}
+                                                    {% if statement.ActionStatement.Action %}
+                                                        {% for action_type, action_data in statement.ActionStatement.Action.items() %}
+                                                            {% if action_type == 'UploadAction' %}
+                                                                {% if action_data.Source %}
+                                                                    <div class="mb-1">
+                                                                        {{ action_data.Source }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% elif action_type == 'DownloadAction' %}
+                                                                {% if action_data.Source %}
+                                                                    <div class="mb-1">
+                                                                        {{ action_data.Source }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    {% if statement.ActionStatement.LocalPath %}
+                                                        <div class="mb-1">
+                                                            {{ statement.ActionStatement.LocalPath }}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if statement.ActionStatement.Source %}
+                                                        <div class="mb-1">
+                                                            {{ statement.ActionStatement.Source }}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if not loop.last %}<hr class="my-1">{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if rule.attributes.statements and rule.attributes.statements.StatementsList %}
+                                            {% for statement in rule.attributes.statements.StatementsList %}
+                                                {% if statement.ActionStatement %}
+                                                    {% if statement.ActionStatement.Action %}
+                                                        {% for action_type, action_data in statement.ActionStatement.Action.items() %}
+                                                            {% if action_type == 'UploadAction' %}
+                                                                {% if action_data.Destination %}
+                                                                    <div class="mb-1">
+                                                                        {{ action_data.Destination }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% elif action_type == 'DownloadAction' %}
+                                                                {% if action_data.Destination %}
+                                                                    <div class="mb-1">
+                                                                        {{ action_data.Destination }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                    {% if statement.ActionStatement.RemotePath %}
+                                                        <div class="mb-1">
+                                                            {{ statement.ActionStatement.RemotePath }}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if statement.ActionStatement.Destination %}
+                                                        <div class="mb-1">
+                                                            {{ statement.ActionStatement.Destination }}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if not loop.last %}<hr class="my-1">{% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if rule.attributes.info.Enabled %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ 'active' if rule.attributes.info.Enabled else 'passive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ rule.attributes.info.FolderId if rule.attributes.info.FolderId else '-' }}</td>
+                                    <td>{{ rule.attributes.info.Department if rule.attributes.info.Department else '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Rule Modal -->
+<div class="modal fade" id="editRuleModal" tabindex="-1" aria-labelledby="editRuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editRuleModalLabel">Event Rule Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editRuleForm">
+                    <input type="hidden" id="editRuleId">
+                    <div class="mb-3">
+                        <label for="editRuleName" class="form-label">İsim</label>
+                        <input type="text" class="form-control" id="editRuleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRuleDescription" class="form-label">Açıklama</label>
+                        <textarea class="form-control" id="editRuleDescription" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveRuleChanges">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // DataTable initialization
+    $('#eventRulesTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/tr.json'
+        }
+    });
+
+    // Toggle status button click
+    $('.toggle-status').click(function() {
+        const button = $(this);
+        const ruleId = button.data('rule-id');
+        const currentStatus = button.data('current-status');
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+
+        Swal.fire({
+            title: 'Durum Değiştir',
+            text: `Event Rule durumunu "${newStatus}" olarak değiştirmek istediğinizden emin misiniz?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Evet',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/rest-api/event-rules/{{ connection.id }}/${ruleId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update button appearance
+                        button.data('current-status', newStatus);
+                        const badge = button.closest('tr').find('.badge');
+                        badge.removeClass('bg-success bg-danger')
+                            .addClass(newStatus === 'active' ? 'bg-success' : 'bg-danger')
+                            .text(newStatus);
+
+                        Swal.fire({
+                            title: 'Başarılı!',
+                            text: 'Event Rule durumu güncellendi.',
+                            icon: 'success'
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Hata!',
+                            text: data.error || 'Bir hata oluştu.',
+                            icon: 'error'
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        title: 'Hata!',
+                        text: 'İşlem sırasında bir hata oluştu.',
+                        icon: 'error'
+                    });
+                });
+            }
+        });
+    });
+
+    // Edit rule button click
+    $('.edit-rule').click(function() {
+        const button = $(this);
+        const ruleId = button.data('rule-id');
+        const ruleName = button.data('rule-name');
+        const ruleDescription = button.data('rule-description');
+
+        // Fill the form
+        $('#editRuleId').val(ruleId);
+        $('#editRuleName').val(ruleName);
+        $('#editRuleDescription').val(ruleDescription);
+
+        // Show modal
+        const editModal = new bootstrap.Modal(document.getElementById('editRuleModal'));
+        editModal.show();
+    });
+
+    // Save rule changes
+    $('#saveRuleChanges').click(function() {
+        const ruleId = $('#editRuleId').val();
+        const ruleName = $('#editRuleName').val();
+        const ruleDescription = $('#editRuleDescription').val();
+
+        if (!ruleName || !ruleDescription) {
+            Swal.fire({
+                title: 'Hata!',
+                text: 'Lütfen tüm alanları doldurun.',
+                icon: 'error'
+            });
+            return;
+        }
+
+        fetch(`/rest-api/event-rules/{{ connection.id }}/${ruleId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                name: ruleName,
+                description: ruleDescription
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update table row
+                const row = $(`.edit-rule[data-rule-id="${ruleId}"]`).closest('tr');
+                row.find('td:eq(1)').text(ruleName);
+                row.find('td:eq(2)').text(ruleDescription);
+                
+                // Update button data
+                const editButton = row.find('.edit-rule');
+                editButton.data('rule-name', ruleName);
+                editButton.data('rule-description', ruleDescription);
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('editRuleModal')).hide();
+
+                Swal.fire({
+                    title: 'Başarılı!',
+                    text: 'Event Rule başarıyla güncellendi.',
+                    icon: 'success'
+                });
+            } else {
+                Swal.fire({
+                    title: 'Hata!',
+                    text: data.error || 'Bir hata oluştu.',
+                    icon: 'error'
+                });
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                title: 'Hata!',
+                text: 'İşlem sırasında bir hata oluştu.',
+                icon: 'error'
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

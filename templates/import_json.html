@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-file-import me-2 text-primary"></i>
+                {% if editor %}JSON Editörü{% else %}JSON Senaryo İşlemleri{% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if editor %}
+                <!-- JSON Editor container -->
+                <div class="mb-3">
+                    <label class="form-label">JSON Verisi</label>
+                    <div id="jsonEditor" style="height: 500px; border: 1px solid #ced4da;"></div>
+                    <div class="form-text mt-2">
+                        Bu editör ile JSON verisi oluşturup Excel formatına dönüştürebilirsiniz.
+                    </div>
+                </div>
+                
+                <button id="convertButton" class="btn btn-primary">
+                    <i class="fas fa-file-export me-2"></i>Excel'e Dönüştür
+                </button>
+                
+                <form id="jsonToExcelForm" method="post" action="{{ url_for('json_to_excel') }}" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="json_data" id="jsonDataInput">
+                </form>
+            {% else %}
+            <div class="row">
+                <!-- Excel'e Dönüştürme -->
+                <div class="col-12 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">
+                                <i class="fas fa-file-excel me-2"></i>
+                                JSON'dan Excel'e Dönüştür
+                            </h6>
+                            <ul class="nav nav-tabs mb-3" id="jsonImportTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="fileUpload-tab" data-bs-toggle="tab" data-bs-target="#fileUpload" type="button" role="tab" aria-controls="fileUpload" aria-selected="true">
+                                        <i class="fas fa-file me-2"></i>Dosya Yükle
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="directInput-tab" data-bs-toggle="tab" data-bs-target="#directInput" type="button" role="tab" aria-controls="directInput" aria-selected="false">
+                                        <i class="fas fa-code me-2"></i>Doğrudan Giriş
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="jsonImportTabContent">
+                                <div class="tab-pane fade show active" id="fileUpload" role="tabpanel" aria-labelledby="fileUpload-tab">
+                                    <form method="POST" action="{{ url_for('json_to_excel') }}" enctype="multipart/form-data">
+                                        {% set form = get_empty_form() %}
+                                        {{ form.csrf_token }}
+                                        <div class="mb-3">
+                                            <label class="form-label">JSON Dosyası Seçin</label>
+                                            <input type="file" class="form-control" name="json_file" accept=".json" required>
+                                            <div class="form-text">
+                                                Seçilen JSON dosyası Excel'e dönüştürülüp, senaryolar içe aktarılacaktır.
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-sync me-2"></i>Dönüştür ve İçe Aktar
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="tab-pane fade" id="directInput" role="tabpanel" aria-labelledby="directInput-tab">
+                                    <div class="mb-3">
+                                        <label class="form-label">JSON Verisi Girin</label>
+                                        <div id="jsonEditor" style="height: 300px; border: 1px solid #ced4da;"></div>
+                                        <div class="form-text">
+                                            JSON verisi doğrudan girebilir ve Excel'e dönüştürebilirsiniz.
+                                        </div>
+                                    </div>
+                                    <button id="convertButton" class="btn btn-primary">
+                                        <i class="fas fa-file-export me-2"></i>Excel'e Dönüştür
+                                    </button>
+                                    
+                                    <form id="jsonToExcelForm" method="post" action="{{ url_for('json_to_excel') }}" style="display: none;">
+                                        {% set form = get_empty_form() %}
+                                        {{ form.csrf_token }}
+                                        <input type="hidden" name="json_data" id="jsonDataInput">
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alan Eşleştirme Bölümü -->
+            {% if preview_data %}
+            <div class="step" id="step2">
+                <div class="progress mb-4" style="height: 4px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ ((current_field_index + 1) / total_fields * 100)|round }}%"></div>
+                </div>
+
+                <div class="d-flex align-items-center mb-4">
+                    <div class="step-indicator active">{{ current_field_index + 1 }}</div>
+                    <h6 class="mb-0 ms-2">Alan Eşleştirme: {{ target_fields[current_field_index] }}</h6>
+                </div>
+
+                <form id="mappingForm" method="POST" action="{{ url_for('import_json_data') }}">
+                    <input type="hidden" name="current_field_index" value="{{ current_field_index }}">
+                    
+                    <!-- Field Mapping Card -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="card-title mb-3">
+                                        <i class="fas fa-map-signs me-2"></i>Kaynak Alan Seçimi
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">JSON'daki Alan</label>
+                                        <div class="input-group">
+                                            <select class="form-select" id="sourceFieldSelect" onchange="updateSourceField(this.value)">
+                                                <option value="">Alan seçin...</option>
+                                                {% for field in json_fields %}
+                                                <option value="{{ field }}">{{ field }}</option>
+                                                {% endfor %}
+                                                <option value="manual">Manuel Giriş</option>
+                                                <option value="static">Sabit Değer</option>
+                                            </select>
+                                            <input type="text" class="form-control" name="source_field" id="sourceFieldInput" style="display: none;" placeholder="Alan adını girin">
+                                        </div>
+                                        <div id="sourceFieldHelp" class="form-text">Listeden seçin veya "Manuel Giriş" ile kendi alan adınızı yazın</div>
+                                    </div>
+
+                                    <!-- Sabit Değer Alanı -->
+                                    <div class="mb-3" id="staticValueSection" style="display: none;">
+                                        <label class="form-label">Sabit Değer</label>
+                                        <input type="text" class="form-control" id="staticValue" name="static_value" placeholder='Örnek: "Name": "Buradaki değer alınacak"'>
+                                        <div class="form-text">JSON formatında yazın. Örnek: "Name": "Buradaki değer alınacak"</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" name="skip_field" id="skipField" onchange="toggleSourceField(this.checked)">
+                                            <label class="form-check-label" for="skipField">Bu alanı atla</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="card-title mb-3">
+                                        <i class="fas fa-eye me-2"></i>Önizleme
+                                    </h6>
+                                    <div class="bg-light p-3 rounded">
+                                        <small class="text-muted">Örnek veri:</small>
+                                        <pre class="mb-0"><code id="previewData">{{ preview_data }}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex justify-content-between">
+                        {% if current_field_index > 0 %}
+                        <button type="submit" name="action" value="previous" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Önceki
+                        </button>
+                        {% else %}
+                        <button type="button" onclick="history.back()" class="btn btn-light">
+                            <i class="fas fa-times me-2"></i>İptal
+                        </button>
+                        {% endif %}
+
+                        {% if current_field_index < total_fields - 1 %}
+                        <button type="submit" name="action" value="next" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-2"></i>İleri
+                        </button>
+                        {% else %}
+                        <button type="submit" name="action" value="finish" class="btn btn-success">
+                            <i class="fas fa-check me-2"></i>İçe Aktarmayı Tamamla
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Progress Bar (İlerleme Çubuğu) -->
+                    <div class="mt-4" id="progressContainer" style="display: none;">
+                        <div class="progress" style="height: 25px; border-radius: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                role="progressbar" 
+                                style="width: 0%; font-size: 14px; line-height: 25px; font-weight: 500;" 
+                                id="progressBar">
+                                0%
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted" id="progressText">İçe aktarma başlatılıyor...</small>
+                        </div>
+                    </div>
+
+                    <!-- Progress Summary -->
+                    <div class="card mt-4">
+                        <div class="card-body">
+                            <h6 class="mb-3">Eşleştirme Durumu</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Hedef Alan</th>
+                                            <th>JSON Alanı</th>
+                                            <th>Durum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for field in target_fields %}
+                                        <tr {% if loop.index0 == current_field_index %}class="table-active"{% endif %}>
+                                            <td>{{ field }}</td>
+                                            <td>{{ field_mappings.get(field, '-') }}</td>
+                                            <td>
+                                                {% if field_mappings.get(field) %}
+                                                <span class="badge bg-success">Eşleştirildi</span>
+                                                {% elif field in skipped_fields %}
+                                                <span class="badge bg-warning">Atlandı</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Bekliyor</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.step-indicator {
+    width: 30px;
+    height: 30px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+}
+
+pre code {
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.table-active {
+    background-color: rgba(var(--primary-color), 0.1) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ace.js') }}"></script>
+<script>
+let editor;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Ace editor
+    editor = ace.edit("jsonEditor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/json");
+    editor.setValue(JSON.stringify({ 
+        "data": [
+            {
+                "Scenario Name": "Example Scenario",
+                "Recurrence": "Daily",
+                "Type": "FTP",
+                "Action": "Upload",
+                "Source": "/path/to/source",
+                "Destination": "/path/to/destination",
+                "User": "username",
+                "Email Notification": "user@example.com"
+            }
+        ]
+    }, null, 2));
+    
+    // JSON'dan Excel'e dönüştür
+    $("#convertButton").click(function() {
+        try {
+            // JSON verisini al
+            var jsonData = editor.getValue();
+            
+            // JSON olarak parse et (doğruluğunu kontrol etmek için)
+            JSON.parse(jsonData);
+            
+            // JSON verisini input alanına yerleştir
+            $("#jsonDataInput").val(jsonData);
+            
+            // Formu gönder
+            $("#jsonToExcelForm").submit();
+        }
+        catch (e) {
+            toastr.error('JSON verisi dönüştürülürken bir hata oluştu: ' + e.message);
+        }
+    });
+
+    const sourceFieldSelect = document.getElementById('sourceFieldSelect');
+    const sourceFieldInput = document.getElementById('sourceFieldInput');
+    const staticValueSection = document.getElementById('staticValueSection');
+    const staticValue = document.getElementById('staticValue');
+    const skipField = document.getElementById('skipField');
+    const sourceFieldHelp = document.getElementById('sourceFieldHelp');
+
+    if (sourceFieldSelect && skipField) {
+        skipField.addEventListener('change', function() {
+            toggleSourceField(this.checked);
+        });
+    }
+
+    if (staticValue) {
+        staticValue.addEventListener('input', function() {
+            const value = this.value;
+            try {
+                // JSON formatını kontrol et
+                if (value.includes(':')) {
+                    const parts = value.split(':');
+                    if (parts.length === 2) {
+                        const fieldValue = parts[1].trim();
+                        // Tırnak işaretlerini kaldır
+                        const cleanValue = fieldValue.replace(/^["']|["']$/g, '').trim();
+                        sourceFieldInput.value = cleanValue;
+                    }
+                }
+            } catch (e) {
+                console.error('JSON parse error:', e);
+            }
+        });
+    }
+});
+
+function updateSourceField(value) {
+    const select = document.getElementById('sourceFieldSelect');
+    const input = document.getElementById('sourceFieldInput');
+    const staticValueSection = document.getElementById('staticValueSection');
+    
+    if (value === 'manual') {
+        input.style.display = 'block';
+        input.value = '';
+        input.focus();
+        staticValueSection.style.display = 'none';
+    } else if (value === 'static') {
+        input.style.display = 'none';
+        staticValueSection.style.display = 'block';
+        document.getElementById('staticValue').focus();
+    } else {
+        input.style.display = 'none';
+        staticValueSection.style.display = 'none';
+        input.value = value;
+    }
+}
+
+function toggleSourceField(checked) {
+    const sourceFieldSelect = document.getElementById('sourceFieldSelect');
+    const sourceFieldInput = document.getElementById('sourceFieldInput');
+    const staticValueSection = document.getElementById('staticValueSection');
+    
+    if (checked) {
+        sourceFieldSelect.disabled = true;
+        sourceFieldInput.disabled = true;
+        staticValueSection.style.display = 'none';
+    } else {
+        sourceFieldSelect.disabled = false;
+        sourceFieldInput.disabled = false;
+        if (sourceFieldSelect.value === 'static') {
+            staticValueSection.style.display = 'block';
+        }
+    }
+}
+
+// Formun gönderilmesi
+$('#mappingForm').on('submit', function(e) {
+    const action = document.activeElement.value;
+    if (action === 'finish') {
+        e.preventDefault();
+        
+        // Progress barı göster
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        progressContainer.style.display = 'block';
+        
+        // Progress barı güncelle
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 10;
+                progress = Math.min(progress, 90);
+                progressBar.style.width = `${progress}%`;
+                progressBar.textContent = `${Math.round(progress)}%`;
+                progressText.textContent = `Senaryolar içe aktarılıyor... (${Math.round(progress)}%)`;
+            }
+        }, 500);
+        
+        // Formu AJAX ile gönder
+        $.ajax({
+            url: '{{ url_for("import_json_data") }}',
+            type: 'POST',
+            data: $(this).serialize(),
+            headers: {
+                'X-CSRFToken': $('input[name="csrf_token"]').val()
+            },
+            success: function(response) {
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                progressText.textContent = 'İçe aktarma tamamlandı! Yönlendiriliyor...';
+                
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            },
+            error: function(xhr, status, error) {
+                clearInterval(progressInterval);
+                progressBar.style.width = '0%';
+                progressText.textContent = 'İçe aktarma sırasında bir hata oluştu';
+                
+                // Hata mesajını göster
+                toastr.error('İçe aktarma sırasında bir hata oluştu');
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 

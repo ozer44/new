@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Database Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-database"></i> Database Connection Settings
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Current Database Status -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle"></i> Current Database</h5>
+                                <p><strong>Type:</strong> {{ current_db.type.upper() }}</p>
+                                <p><strong>Server:</strong> {{ current_db.server }}</p>
+                                <p><strong>Database:</strong> {{ current_db.database }}</p>
+                                <p><strong>User:</strong> {{ current_db.user }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Configuration Cards -->
+                    <div class="row">
+                        <!-- Local Database Card -->
+                        <div class="col-md-6">
+                            <div class="card {% if current_db.type == 'local' %}border-success{% else %}border-secondary{% endif %}">
+                                <div class="card-header {% if current_db.type == 'local' %}bg-success text-white{% else %}bg-light{% endif %}">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-server"></i> Local SQL Server
+                                        {% if current_db.type == 'local' %}
+                                            <span class="badge badge-light ml-2">ACTIVE</span>
+                                        {% endif %}
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <p><strong>Server:</strong> {{ local_db.server }}</p>
+                                            <p><strong>Database:</strong> {{ local_db.database }}</p>
+                                            <p><strong>User:</strong> {{ local_db.user }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-6">
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="action" value="switch_database">
+                                                <input type="hidden" name="database_type" value="local">
+                                                <button type="submit" class="btn btn-primary btn-sm" 
+                                                        {% if current_db.type == 'local' %}disabled{% endif %}>
+                                                    <i class="fas fa-toggle-on"></i> Switch to Local
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <div class="col-6">
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="action" value="test_connection">
+                                                <input type="hidden" name="database_type" value="local">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-plug"></i> Test Connection
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Azure Database Card -->
+                        <div class="col-md-6">
+                            <div class="card {% if current_db.type == 'azure' %}border-success{% else %}border-secondary{% endif %}">
+                                <div class="card-header {% if current_db.type == 'azure' %}bg-success text-white{% else %}bg-light{% endif %}">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-cloud"></i> Azure SQL Server
+                                        {% if current_db.type == 'azure' %}
+                                            <span class="badge badge-light ml-2">ACTIVE</span>
+                                        {% endif %}
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <p><strong>Server:</strong> {{ azure_db.server }}</p>
+                                            <p><strong>Database:</strong> {{ azure_db.database }}</p>
+                                            <p><strong>User:</strong> {{ azure_db.user }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-6">
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="action" value="switch_database">
+                                                <input type="hidden" name="database_type" value="azure">
+                                                <button type="submit" class="btn btn-primary btn-sm" 
+                                                        {% if current_db.type == 'azure' %}disabled{% endif %}>
+                                                    <i class="fas fa-toggle-on"></i> Switch to Azure
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <div class="col-6">
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="action" value="test_connection">
+                                                <input type="hidden" name="database_type" value="azure">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-plug"></i> Test Connection
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Information -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Important Notes:</h6>
+                                <ul class="mb-0">
+                                    <li>Switching databases will change the active connection for the entire application.</li>
+                                    <li>Make sure both databases have the same schema structure.</li>
+                                    <li>Test connections before switching to ensure connectivity.</li>
+                                    <li>Database configuration is managed through environment variables in the <code>config.py</code> file.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Environment Variables Information -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-cog"></i> Environment Variables Configuration
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>To modify database configurations, update the following environment variables:</p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Local Database:</h6>
+                                            <ul class="list-unstyled">
+                                                <li><code>LOCAL_SERVER</code></li>
+                                                <li><code>LOCAL_DATABASE</code></li>
+                                                <li><code>LOCAL_UID</code></li>
+                                                <li><code>LOCAL_PWD</code></li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Azure Database:</h6>
+                                            <ul class="list-unstyled">
+                                                <li><code>AZURE_SERVER</code></li>
+                                                <li><code>AZURE_DATABASE</code></li>
+                                                <li><code>AZURE_UID</code></li>
+                                                <li><code>AZURE_PWD</code></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p class="mt-2">
+                                        <strong>Active Database:</strong> <code>DATABASE_TYPE</code> (set to 'local' or 'azure')
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add confirmation for database switching
+document.addEventListener('DOMContentLoaded', function() {
+    const switchButtons = document.querySelectorAll('button[type="submit"]');
+    switchButtons.forEach(button => {
+        if (button.textContent.includes('Switch to')) {
+            button.addEventListener('click', function(e) {
+                const databaseType = this.textContent.includes('Local') ? 'Local' : 'Azure';
+                if (!confirm(`Are you sure you want to switch to ${databaseType} database? This will change the active connection for the entire application.`)) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

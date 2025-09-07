@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Excel'den İçeri Aktarma</h3>
+                </div>
+                <div class="card-body">
+                    <form id="excel-import-form" method="POST" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="excel-file" class="form-label">Excel Dosyası Seçin</label>
+                            <input type="file" class="form-control" id="excel-file" name="file" accept=".xlsx, .xls" required>
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <button type="submit" id="start-import" class="btn btn-primary">İçeri Aktarmayı Başlat</button>
+                        </div>
+                    </form>
+                    
+                    <div id="progress-container" style="display: none;">
+                        <div class="progress">
+                            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                0%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/progress.js') }}"></script>
+<script>
+document.getElementById('excel-import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const startBtn = document.getElementById('start-import');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    
+    startBtn.disabled = true;
+    progressContainer.style.display = 'block';
+    
+    fetch('/import-excel/process', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let progress = 0;
+            const interval = setInterval(function () {
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 1000);
+                } else {
+                    progress += 5;
+                    progressBar.style.width = progress + "%";
+                    progressBar.innerText = progress + "%";
+                }
+            }, 100);
+        } else {
+            alert('Hata: ' + data.message);
+            window.location.reload();
+        }
+    })
+    .catch(err => {
+        alert('Sunucu hatası.');
+        window.location.reload();
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

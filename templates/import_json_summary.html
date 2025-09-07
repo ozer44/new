@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Senaryo İçe Aktarma Özeti</h2>
+    <hr>
+    <div class="alert alert-info">
+        <p><strong>Toplam Senaryo:</strong> {{ total }}</p>
+        <p><strong>Aktif:</strong> {{ active }}</p>
+        <p><strong>Pasif:</strong> {{ passive }}</p>
+    </div>
+
+    <div id="progress-container" style="display:none;">
+        <h4>Aktarım Başladı...</h4>
+        <div class="progress" style="height: 30px;">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 0%;">0%</div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button id="start-import" class="btn btn-success">İçeri Aktar</button>
+        <a href="{{ url_for('import_json') }}" class="btn btn-danger">İptal Et</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/progress.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">REST API Bağlantıları</h3>
+                    <button type="button" class="btn btn-primary float-end" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                        <i class="fas fa-plus"></i> Yeni Bağlantı
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Bağlantı Adı</th>
+                                    <th>IP Adresi</th>
+                                    <th>Port</th>
+                                    <th>Kullanıcı Adı</th>
+                                    <th>Durum</th>
+                                    <th>AuthToken</th>
+                                    <th>Son Bağlantı</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for connection in connections %}
+                                <tr>
+                                    <td>{{ connection.name }}</td>
+                                    <td>{{ connection.ip_address }}</td>
+                                    <td>{{ connection.port }}</td>
+                                    <td>{{ connection.username }}</td>
+                                    <td>
+                                        {% if connection.is_active and connection.last_connection %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Bağlantı Var</span>
+                                        {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Bağlantı Yok</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if connection.last_connection and connection.auth_token %}
+                                        <div class="d-flex align-items-center">
+                                            <span class="auth-token me-2" data-token="{{ connection.auth_token }}">
+                                                <code>{{ connection.auth_token[:10] }}...</code>
+                                            </span>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="copyAuthToken(this)" title="Token'ı Kopyala">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">Token yok</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if connection.last_connection %}
+                                        {{ connection.last_connection.strftime('%d/%m/%Y %H:%M:%S') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if connection.is_active and connection.auth_token %}
+                                            <button class="btn btn-sm btn-info test-connection" data-connection-id="{{ connection.id }}">
+                                                <i class="fas fa-plug"></i> Test
+                                            </button>
+                                            <button class="btn btn-sm btn-warning disconnect-connection" data-connection-id="{{ connection.id }}">
+                                                <i class="fas fa-unlink"></i> Bağlantıyı Kes
+                                            </button>
+                                            <a href="{{ url_for('event_rules', connection_id=connection.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-list"></i> Event Rules
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-success connect-connection" data-connection-id="{{ connection.id }}">
+                                                <i class="fas fa-plug"></i> Bağlan
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-secondary edit-connection" data-connection-id="{{ connection.id }}">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-danger delete-connection" data-connection-id="{{ connection.id }}">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Connection Modal -->
+<div class="modal fade" id="addConnectionModal" tabindex="-1" aria-labelledby="addConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addConnectionModalLabel">Yeni REST API Bağlantısı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addConnectionForm" method="POST" action="{{ url_for('add_rest_api_connection') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Bağlantı Adı</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ip_address" class="form-label">IP Adresi</label>
+                        <input type="text" class="form-control" id="ip_address" name="ip_address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="port" name="port" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Şifre</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Connection Modal -->
+<div class="modal fade" id="editConnectionModal" tabindex="-1" aria-labelledby="editConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editConnectionModalLabel">REST API Bağlantısını Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editConnectionForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Bağlantı Adı</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_ip_address" class="form-label">IP Adresi</label>
+                        <input type="text" class="form-control" id="edit_ip_address" name="ip_address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="edit_port" name="port" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_username" class="form-label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_password" class="form-label">Şifre (Değiştirmek istemiyorsanız boş bırakın)</label>
+                        <input type="password" class="form-control" id="edit_password" name="password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Status Modal -->
+<div class="modal fade" id="connectionStatusModal" tabindex="-1" aria-labelledby="connectionStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="connectionStatusModalLabel">Bağlantı Durumu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="connectionStatus"></div>
+                <div id="permissions" class="mt-4" style="display: none;">
+                    <h6>Kullanıcı İzinleri</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>İzin</th>
+                                    <th>Açıklama</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="eventRules" class="mt-4" style="display: none;">
+                    <h6>Site Event Kuralları</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Kural ID</th>
+                                    <th>İsim</th>
+                                    <th>Durum</th>
+                                    <th>Detaylar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="eventRulesBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Test bağlantı butonu
+    $('.test-connection').click(function() {
+        const connectionId = $(this).data('connection-id');
+        testConnection(connectionId);
+    });
+
+    // Bağlan butonu
+    $('.connect-connection').click(function() {
+        const connectionId = $(this).data('connection-id');
+        testConnection(connectionId);
+    });
+
+    // Bağlantıyı kes butonu
+    $('.disconnect-connection').click(function() {
+        const connectionId = $(this).data('connection-id');
+        disconnectConnection(connectionId);
+    });
+
+    // Düzenle butonu
+    $('.edit-connection').click(function() {
+        const connectionId = $(this).data('connection-id');
+        editConnection(connectionId);
+    });
+
+    // Sil butonu
+    $('.delete-connection').click(function() {
+        const connectionId = $(this).data('connection-id');
+        deleteConnection(connectionId);
+    });
+});
+
+function testConnection(connectionId) {
+    Swal.fire({
+        title: 'Bağlantı Test Ediliyor',
+        text: 'Lütfen bekleyin...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch(`/rest-api/test-connection/${connectionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Başarılı!',
+                html: `
+                    <p>${data.message}</p>
+                    <p><strong>AuthToken:</strong></p>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all;">
+                        ${data.token}
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: 'Tamam'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    location.reload();
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Hata!',
+                text: data.error,
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Hata!',
+            text: 'Bağlantı testi sırasında bir hata oluştu.',
+            icon: 'error'
+        });
+    });
+}
+
+function disconnectConnection(connectionId) {
+    Swal.fire({
+        title: 'Bağlantıyı Kes',
+        text: 'Bu bağlantıyı kesmek istediğinizden emin misiniz?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Evet, bağlantıyı kes',
+        cancelButtonText: 'İptal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/rest-api/disconnect/${connectionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Başarılı!',
+                        text: 'Bağlantı başarıyla kesildi.',
+                        icon: 'success'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Hata!',
+                        text: data.error || 'Bağlantı kesilirken bir hata oluştu.',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Hata!',
+                    text: 'Bağlantı kesilirken bir hata oluştu.',
+                    icon: 'error'
+                });
+            });
+        }
+    });
+}
+
+function editConnection(connectionId) {
+    // Get connection details
+    fetch(`/rest-api/connections`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const connection = data.connections.find(c => c.id === connectionId);
+                if (connection) {
+                    // Fill the form
+                    $('#edit_name').val(connection.name);
+                    $('#edit_ip_address').val(connection.ip_address);
+                    $('#edit_port').val(connection.port);
+                    $('#edit_username').val(connection.username);
+                    $('#edit_password').val(''); // Clear password field
+                    
+                    // Update form action
+                    $('#editConnectionForm').attr('action', `/rest-api/edit-connection/${connectionId}`);
+                    
+                    // Show modal
+                    var editModal = new bootstrap.Modal(document.getElementById('editConnectionModal'));
+                    editModal.show();
+                }
+            } else {
+                Swal.fire({
+                    title: 'Hata!',
+                    text: 'Bağlantı bilgileri alınamadı.',
+                    icon: 'error'
+                });
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                title: 'Hata!',
+                text: 'Bağlantı bilgileri alınırken bir hata oluştu.',
+                icon: 'error'
+            });
+        });
+}
+
+function deleteConnection(connectionId) {
+    Swal.fire({
+        title: 'Emin misiniz?',
+        text: "Bu bağlantıyı silmek istediğinizden emin misiniz?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Evet, sil!',
+        cancelButtonText: 'İptal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/rest-api/delete-connection/${connectionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Silindi!',
+                        text: 'Bağlantı başarıyla silindi.',
+                        icon: 'success'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Hata!',
+                        text: data.error || 'Silme işlemi başarısız oldu.',
+                        icon: 'error'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'Hata!',
+                    text: 'Silme işlemi sırasında bir hata oluştu.',
+                    icon: 'error'
+                });
+            });
+        }
+    });
+}
+
+function copyAuthToken(button) {
+    const token = button.parentElement.querySelector('.auth-token').getAttribute('data-token');
+    if (!token) {
+        Swal.fire({
+            title: 'Hata!',
+            text: 'Kopyalanacak token bulunamadı.',
+            icon: 'error'
+        });
+        return;
+    }
+    
+    navigator.clipboard.writeText(token).then(() => {
+        Swal.fire({
+            title: 'Kopyalandı!',
+            text: 'AuthToken panoya kopyalandı.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }).catch(err => {
+        console.error('Kopyalama hatası:', err);
+        Swal.fire({
+            title: 'Hata!',
+            text: 'Token kopyalanırken bir hata oluştu.',
+            icon: 'error'
+        });
+    });
+}
+
+// Form submit handlers
+document.getElementById('addConnectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch($(this).attr('action'), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Başarılı!',
+                text: 'Bağlantı başarıyla eklendi.',
+                icon: 'success'
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Hata!',
+                text: data.error || 'Bilinmeyen bir hata oluştu.',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Hata!',
+            text: 'Bağlantı eklenirken bir hata oluştu.',
+            icon: 'error'
+        });
+    });
+});
+
+document.getElementById('editConnectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch($(this).attr('action'), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Başarılı!',
+                text: 'Bağlantı başarıyla güncellendi.',
+                icon: 'success'
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Hata!',
+                text: data.error || 'Güncelleme işlemi başarısız oldu.',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Hata!',
+            text: 'Bağlantı güncellenirken bir hata oluştu.',
+            icon: 'error'
+        });
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,131 @@
+                    <div class="form-group">
+                        <label for="ad_group_filter">AD Group Filter</label>
+                        <input type="text" class="form-control" id="ad_group_filter" name="ad_group_filter" value="{{ settings.ad_group_filter }}" required>
+                        <small class="form-text text-muted">Use {group} as placeholder for group name</small>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-info" id="testAdConnection">
+                            <i class="fas fa-vial"></i> Test Connection
+                        </button>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AD Test Results Modal -->
+<div class="modal fade" id="adTestModal" tabindex="-1" role="dialog" aria-labelledby="adTestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adTestModalLabel">Active Directory Connection Test</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="testResults">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Testing connection...</span>
+                        </div>
+                        <p class="mt-2">Testing connection...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#testAdConnection').click(function() {
+        $('#adTestModal').modal('show');
+        
+        // Show loading state
+        $('#testResults').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Testing connection...</span>
+                </div>
+                <p class="mt-2">Testing connection...</p>
+            </div>
+        `);
+        
+        // Make API call to test connection
+        $.ajax({
+            url: '/test-ad-connection',
+            method: 'POST',
+            success: function(response) {
+                let html = '';
+                
+                if (response.success) {
+                    html = `
+                        <div class="alert alert-success">
+                            <h4><i class="fas fa-check-circle"></i> Connection Successful</h4>
+                            <p>All connection tests passed successfully.</p>
+                        </div>
+                    `;
+                } else {
+                    html = `
+                        <div class="alert alert-danger">
+                            <h4><i class="fas fa-times-circle"></i> Connection Failed</h4>
+                            <p>${response.error || 'Unknown error occurred'}</p>
+                        </div>
+                    `;
+                }
+                
+                // Add test steps
+                html += '<div class="mt-4"><h5>Test Steps:</h5><ul class="list-group">';
+                response.steps.forEach(step => {
+                    const statusClass = step.status === 'success' ? 'success' : 
+                                      step.status === 'error' ? 'danger' : 'warning';
+                    const statusIcon = step.status === 'success' ? 'check-circle' :
+                                     step.status === 'error' ? 'times-circle' : 'spinner';
+                    
+                    html += `
+                        <li class="list-group-item list-group-item-${statusClass}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-${statusIcon}"></i>
+                                    <strong>${step.step}</strong>
+                                </div>
+                                <span class="badge badge-${statusClass} badge-pill">
+                                    ${step.status.toUpperCase()}
+                                </span>
+                            </div>
+                            <small class="text-muted">${step.details}</small>
+                        </li>
+                    `;
+                });
+                html += '</ul></div>';
+                
+                $('#testResults').html(html);
+            },
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while testing the connection.';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMessage = response.message || errorMessage;
+                } catch (e) {}
+                
+                $('#testResults').html(`
+                    <div class="alert alert-danger">
+                        <h4><i class="fas fa-times-circle"></i> Error</h4>
+                        <p>${errorMessage}</p>
+                    </div>
+                `);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

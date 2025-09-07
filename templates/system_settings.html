@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Sistem Ayarları</h2>
+    <form method="POST" action="{{ url_for('system_settings') }}">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Genel Ayarlar</h4>
+                </div>
+                    <div class="card-body">
+                <div class="row">
+                            <div class="col-md-6">
+                                        <div class="mb-3">
+                            <label for="system_name" class="form-label">Sistem Adı</label>
+                            <input type="text" class="form-control" id="system_name" name="system_name" value="{{ settings.system_name }}">
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Zaman Dilimi</label>
+                            <select class="form-select" id="timezone" name="timezone">
+                                <option value="Europe/Istanbul" {% if settings.timezone == 'Europe/Istanbul' %}selected{% endif %}>Europe/Istanbul</option>
+                                                <option value="UTC" {% if settings.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="date_format" class="form-label">Tarih Formatı</label>
+                            <select class="form-select" id="date_format" name="date_format">
+                                                <option value="DD/MM/YYYY" {% if settings.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY</option>
+                                                <option value="MM/DD/YYYY" {% if settings.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY</option>
+                                                <option value="YYYY-MM-DD" {% if settings.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD</option>
+                                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="min_password_length" class="form-label">Minimum Şifre Uzunluğu</label>
+                            <input type="number" class="form-control" id="min_password_length" name="min_password_length" value="{{ settings.min_password_length }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="session_timeout" class="form-label">Oturum Zaman Aşımı (dakika)</label>
+                            <input type="number" class="form-control" id="session_timeout" name="session_timeout" value="{{ settings.session_timeout }}">
+                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Kimlik Doğrulama Ayarları</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                            <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="two_factor" name="two_factor" {% if settings.two_factor %}checked{% endif %}>
+                                <label class="form-check-label" for="two_factor">İki Faktörlü Kimlik Doğrulama</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="login_method" name="login_method" {% if settings.login_method %}checked{% endif %}>
+                                <label class="form-check-label" for="login_method">Sadece Microsoft ile Giriş</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Active Directory Ayarları</h4>
+            </div>
+                                    <div class="card-body">
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="ad_enabled" name="ad_enabled" {% if settings.ad_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="ad_enabled">Active Directory Kimlik Doğrulamayı Etkinleştir</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="ad_server" class="form-label">AD Sunucu</label>
+                            <input type="text" class="form-control" id="ad_server" name="ad_server" value="{{ settings.ad_server }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_domain" class="form-label">Domain</label>
+                            <input type="text" class="form-control" id="ad_domain" name="ad_domain" value="{{ settings.ad_domain }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_base_dn" class="form-label">Base DN</label>
+                            <input type="text" class="form-control" id="ad_base_dn" name="ad_base_dn" value="{{ settings.ad_base_dn }}">
+                        </div>
+                                        <div class="mb-3">
+                            <label for="ad_username" class="form-label">AD Kullanıcı Adı</label>
+                            <input type="text" class="form-control" id="ad_username" name="ad_username" value="{{ settings.ad_username }}">
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="ad_password" class="form-label">AD Şifre</label>
+                            <input type="password" class="form-control" id="ad_password" name="ad_password" value="{{ settings.ad_password }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="ad_port" class="form-label">Port</label>
+                            <input type="number" class="form-control" id="ad_port" name="ad_port" value="{{ settings.ad_port }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="ad_use_ssl" name="ad_use_ssl" {% if settings.ad_use_ssl %}checked{% endif %}>
+                                <label class="form-check-label" for="ad_use_ssl">SSL Kullan</label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="ad_search_base" class="form-label">Arama Temeli (Search Base)</label>
+                            <input type="text" class="form-control" id="ad_search_base" name="ad_search_base" 
+                                   value="{{ settings.ad_search_base }}" placeholder="DC=example,DC=com">
+                            <div class="form-text">LDAP aramalarının yapılacağı temel DN</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_search_filter" class="form-label">Arama Filtresi (Search Filter)</label>
+                            <input type="text" class="form-control" id="ad_search_filter" name="ad_search_filter" 
+                                   value="{{ settings.ad_search_filter }}" placeholder="(&(objectClass=user)(sAMAccountName={username}))">
+                            <div class="form-text">LDAP aramalarında kullanılacak filtre. {username} kullanıcı adı ile değiştirilecektir.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_username_attribute" class="form-label">Kullanıcı Adı Özelliği</label>
+                            <input type="text" class="form-control" id="ad_username_attribute" name="ad_username_attribute" value="{{ settings.ad_username_attribute }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_group_filter" class="form-label">Grup Filtresi</label>
+                            <input type="text" class="form-control" id="ad_group_filter" name="ad_group_filter" value="{{ settings.ad_group_filter }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="ad_admin_group" class="form-label">Admin Grubu</label>
+                            <input type="text" class="form-control" id="ad_admin_group" name="ad_admin_group" value="{{ settings.ad_admin_group }}">
+                        </div>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-info" id="testAdConnection">
+                                <i class="fas fa-plug"></i> Bağlantıyı Test Et
+                            </button>
+                            <div id="testResult" class="mt-2" style="display: none;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Yedekleme Ayarları</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                            <div class="col-md-6">
+                                        <div class="mb-3">
+                            <label for="backup_frequency" class="form-label">Yedekleme Sıklığı</label>
+                            <select class="form-select" id="backup_frequency" name="backup_frequency">
+                                                <option value="daily" {% if settings.backup_frequency == 'daily' %}selected{% endif %}>Günlük</option>
+                                                <option value="weekly" {% if settings.backup_frequency == 'weekly' %}selected{% endif %}>Haftalık</option>
+                                                <option value="monthly" {% if settings.backup_frequency == 'monthly' %}selected{% endif %}>Aylık</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="backup_location" class="form-label">Yedekleme Konumu</label>
+                            <input type="text" class="form-control" id="backup_location" name="backup_location" value="{{ settings.backup_location }}">
+                        </div>
+                                        </div>
+                    <div class="col-md-6">
+                                        <div class="mb-3">
+                            <label for="backup_retention" class="form-label">Yedek Saklama Süresi (gün)</label>
+                            <input type="number" class="form-control" id="backup_retention" name="backup_retention" value="{{ settings.backup_retention }}">
+                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Log Ayarları</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                            <div class="col-md-6">
+                                        <div class="mb-3">
+                            <label for="log_level" class="form-label">Log Seviyesi</label>
+                            <select class="form-select" id="log_level" name="log_level">
+                                <option value="DEBUG" {% if settings.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                                <option value="INFO" {% if settings.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                                <option value="WARNING" {% if settings.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                                <option value="ERROR" {% if settings.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                            <label for="log_path" class="form-label">Log Dosya Yolu</label>
+                            <input type="text" class="form-control" id="log_path" name="log_path" value="{{ settings.log_path }}">
+                        </div>
+                                        </div>
+                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="log_rotation" name="log_rotation" {% if settings.log_rotation %}checked{% endif %}>
+                                <label class="form-check-label" for="log_rotation">Log Rotasyonu</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+        <div class="text-end mb-4">
+            <button type="submit" class="btn btn-primary">Ayarları Kaydet</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Active Directory ayarlarını göster/gizle
+    const adEnabled = document.getElementById('ad_enabled');
+    const adSettings = document.querySelectorAll('[id^="ad_"]:not(#ad_enabled)');
+    
+    function toggleAdSettings() {
+        adSettings.forEach(setting => {
+            setting.closest('.mb-3').style.display = adEnabled.checked ? 'block' : 'none';
+        });
+    }
+    
+    adEnabled.addEventListener('change', toggleAdSettings);
+    toggleAdSettings(); // Sayfa yüklendiğinde mevcut durumu ayarla
+
+    // Test Connection button functionality
+    const testButton = document.getElementById('testAdConnection');
+    const testResult = document.getElementById('testResult');
+
+    testButton.addEventListener('click', async function() {
+        testButton.disabled = true;
+        testButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Test Ediliyor...';
+        testResult.style.display = 'none';
+
+        try {
+            const response = await fetch('/test-ad-connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+            
+            testResult.style.display = 'block';
+            if (data.success) {
+                testResult.innerHTML = `
+                    <div class="alert alert-success">
+                        <h5>Bağlantı Testi Başarılı</h5>
+                        <ul class="mb-0">
+                            ${data.steps.map(step => `
+                                <li>
+                                    <i class="fas fa-check text-success"></i> 
+                                    ${step.step}: ${step.details}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                testResult.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Bağlantı Testi Başarısız</h5>
+                        <ul class="mb-0">
+                            ${data.steps.map(step => `
+                                <li>
+                                    <i class="fas fa-${step.status === 'success' ? 'check text-success' : 'times text-danger'}"></i> 
+                                    ${step.step}: ${step.details}
+                                </li>
+                            `).join('')}
+                        </ul>
+                        ${data.error ? `<p class="mt-2 mb-0"><strong>Hata:</strong> ${data.error}</p>` : ''}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            testResult.style.display = 'block';
+            testResult.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>Bağlantı Testi Başarısız</h5>
+                    <p class="mb-0">Test sırasında bir hata oluştu: ${error.message}</p>
+                </div>
+            `;
+        } finally {
+            testButton.disabled = false;
+            testButton.innerHTML = '<i class="fas fa-plug"></i> Bağlantıyı Test Et';
+        }
+    });
+});
+</script>
+{% endblock %} 

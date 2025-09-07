@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">
+            <a href="{{ url_for('scenario_detail', scenario_id=scenario.id) }}" class="text-decoration-none text-muted me-2">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            Senaryo Düzenle
+        </h4>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0">{{ scenario.scenario_name }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Senaryo Adı</label>
+                            <input type="text" class="form-control" name="scenario_name" value="{{ scenario.scenario_name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tip</label>
+                            <select class="form-select" name="type" required>
+                                <option value="Download" {% if scenario.type == 'Download' %}selected{% endif %}>Download</option>
+                                <option value="Upload" {% if scenario.type == 'Upload' %}selected{% endif %}>Upload</option>
+                                <option value="Monitor" {% if scenario.type == 'Monitor' %}selected{% endif %}>Monitor</option>
+                                <option value="%FS.PATH%" {% if scenario.type == '%FS.PATH%' %}selected{% endif %}>%FS.PATH%</option>
+                                <option value="Decompress" {% if scenario.type == 'Decompress' %}selected{% endif %}>Decompress</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">İşlem Tipi</label>
+                            <select class="form-select" name="type_of_action" required>
+                                <option value="UNC" {% if scenario.type_of_action == 'UNC' %}selected{% endif %}>UNC</option>
+                                <option value="SFTP" {% if scenario.type_of_action == 'SFTP' %}selected{% endif %}>SFTP</option>
+                                <option value="FTP" {% if scenario.type_of_action == 'FTP' %}selected{% endif %}>FTP</option>
+                                <option value="Cloud Azure" {% if scenario.type_of_action == 'Cloud Azure' %}selected{% endif %}>Cloud Azure</option>
+                                <option value="Cloud AWS" {% if scenario.type_of_action == 'Cloud AWS' %}selected{% endif %}>Cloud AWS</option>
+                                <option value="Monitor" {% if scenario.type_of_action == 'Monitor' %}selected{% endif %}>Monitor</option>
+                                <option value="Local" {% if scenario.type_of_action == 'Local' %}selected{% endif %}>Local</option>
+                                <option value="-" {% if scenario.type_of_action == '-' %}selected{% endif %}>-</option>
+                                <option value="Azure" {% if scenario.type_of_action == 'Azure' %}selected{% endif %}>Azure</option>
+                                <option value="HTTP" {% if scenario.type_of_action == 'HTTP' %}selected{% endif %}>HTTP</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <input type="text" class="form-control" name="user" value="{{ scenario.user }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Recurrence</label>
+                            <select class="form-select" name="recurrence" required>
+                                <option value="Continually" {% if scenario.recurrence == 'Continually' %}selected{% endif %}>Continually</option>
+                                <option value="Daily" {% if scenario.recurrence == 'Daily' %}selected{% endif %}>Daily</option>
+                                <option value="Weekly" {% if scenario.recurrence == 'Weekly' %}selected{% endif %}>Weekly</option>
+                                <option value="Monthly" {% if scenario.recurrence == 'Monthly' %}selected{% endif %}>Monthly</option>
+                                <option value="Folder Monitor" {% if scenario.recurrence == 'Folder Monitor' %}selected{% endif %}>Folder Monitor</option>
+                                <option value="Weekday" {% if scenario.recurrence == 'Weekday' %}selected{% endif %}>Weekday</option>
+                                <option value="Daily (Weekday)" {% if scenario.recurrence == 'Daily (Weekday)' %}selected{% endif %}>Daily (Weekday)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Source</label>
+                            <input type="text" class="form-control" name="source" value="{{ scenario.source }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Destination</label>
+                            <input type="text" class="form-control" name="destination" value="{{ scenario.destination }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Notification</label>
+                            <input type="text" class="form-control" name="email_notification" value="{{ scenario.email_notification }}">
+                            <div class="form-text">Separate multiple email addresses with semicolons (;)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Responsible Person</label>
+                            <input type="text" class="form-control" name="responsible_person" value="{{ scenario.responsible_person }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{{ url_for('scenario_detail', scenario_id=scenario.id) }}" class="btn btn-light">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border-color: #dee2e6;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+</style>
+{% endblock %} 

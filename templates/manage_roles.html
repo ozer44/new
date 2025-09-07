@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Rol Yönetimi</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createRoleModal">
+                            <i class="fas fa-plus"></i> Yeni Rol
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rol Adı</th>
+                                    <th>Açıklama</th>
+                                    <th>İzinler</th>
+                                    <th>Kullanıcı Sayısı</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in roles %}
+                                <tr>
+                                    <td>{{ role.name }}</td>
+                                    <td>{{ role.description }}</td>
+                                    <td>
+                                        {% for permission in role.permissions %}
+                                        <span class="badge badge-info">{{ permission.name }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ role.users.count() }}</td>
+                                    <td>
+                                        {% if not role.is_admin %}
+                                        <button class="btn btn-sm btn-warning edit-role" data-id="{{ role.id }}" data-name="{{ role.name }}" data-description="{{ role.description }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-role" data-id="{{ role.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Rol Oluşturma Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Rol Oluştur</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createRoleForm">
+                    <div class="form-group">
+                        <label>Rol Adı</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea class="form-control" name="description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>İzinler</label>
+                        <div class="permission-list">
+                            {% for permission in permissions %}
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" name="permissions" value="{{ permission.id }}" id="perm_{{ permission.id }}">
+                                <label class="custom-control-label" for="perm_{{ permission.id }}">{{ permission.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="createRoleBtn">Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rol Düzenleme Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rol Düzenle</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editRoleForm">
+                    <input type="hidden" name="role_id" id="edit_role_id">
+                    <div class="form-group">
+                        <label>Rol Adı</label>
+                        <input type="text" class="form-control" name="name" id="edit_role_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea class="form-control" name="description" id="edit_role_description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>İzinler</label>
+                        <div class="permission-list" id="edit_permission_list">
+                            {% for permission in permissions %}
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" name="permissions" value="{{ permission.id }}" id="edit_perm_{{ permission.id }}">
+                                <label class="custom-control-label" for="edit_perm_{{ permission.id }}">{{ permission.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="updateRoleBtn">Güncelle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Yeni rol oluşturma
+    $('#createRoleBtn').click(function() {
+        const formData = {
+            name: $('input[name="name"]').val(),
+            description: $('textarea[name="description"]').val(),
+            permissions: $('input[name="permissions"]:checked').map(function() {
+                return $(this).val();
+            }).get()
+        };
+
+        $.ajax({
+            url: '/admin/roles/create',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON.message);
+            }
+        });
+    });
+
+    // Rol düzenleme
+    $('.edit-role').click(function() {
+        const roleId = $(this).data('id');
+        const roleName = $(this).data('name');
+        const roleDescription = $(this).data('description');
+
+        $('#edit_role_id').val(roleId);
+        $('#edit_role_name').val(roleName);
+        $('#edit_role_description').val(roleDescription);
+
+        // İzinleri sıfırla
+        $('input[name="permissions"]').prop('checked', false);
+
+        // Rolün mevcut izinlerini işaretle
+        $.get(`/admin/roles/${roleId}/permissions`, function(permissions) {
+            permissions.forEach(function(permissionId) {
+                $(`#edit_perm_${permissionId}`).prop('checked', true);
+            });
+        });
+
+        $('#editRoleModal').modal('show');
+    });
+
+    // Rol güncelleme
+    $('#updateRoleBtn').click(function() {
+        const roleId = $('#edit_role_id').val();
+        const formData = {
+            name: $('#edit_role_name').val(),
+            description: $('#edit_role_description').val(),
+            permissions: $('input[name="permissions"]:checked').map(function() {
+                return $(this).val();
+            }).get()
+        };
+
+        $.ajax({
+            url: `/admin/roles/${roleId}/update`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON.message);
+            }
+        });
+    });
+
+    // Rol silme
+    $('.delete-role').click(function() {
+        if (confirm('Bu rolü silmek istediğinizden emin misiniz?')) {
+            const roleId = $(this).data('id');
+            $.ajax({
+                url: `/admin/roles/${roleId}/delete`,
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON.message);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %} 

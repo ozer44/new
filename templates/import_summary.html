@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>Senaryo İçe Aktarma Önizleme</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h5 class="card-title">Toplam Senaryo</h5>
+                            <p class="card-text display-4">{{ total_scenarios }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Aktif Senaryo</h5>
+                            <p class="card-text display-4">{{ active_scenarios }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning">
+                        <div class="card-body">
+                            <h5 class="card-title">Pasif Senaryo</h5>
+                            <p class="card-text display-4">{{ passive_scenarios }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h4>Önizleme (İlk 10 Senaryo)</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Custom ID</th>
+                            <th>Scenario Name</th>
+                            <th>Action Type</th>
+                            <th>Status</th>
+                            <th>Step Count</th>
+                            <th>Department</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scenario in preview_data %}
+                        <tr>
+                            <td>{{ scenario['Custom ID'] }}</td>
+                            <td>{{ scenario['Scenario Name'] }}</td>
+                            <td>{{ scenario['Action Type'] }}</td>
+                            <td>
+                                {% if scenario['Status'] == 'Aktif' %}
+                                <span class="badge bg-success">{{ scenario['Status'] }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">{{ scenario['Status'] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ scenario['Step Count'] }}</td>
+                            <td>{{ scenario['Department'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">
+                <div class="progress mb-3" style="display: none;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('import_json') }}'">
+                        <i class="fas fa-times"></i> İptal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="importButton">
+                        <i class="fas fa-file-import"></i> İçe Aktar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('importButton').addEventListener('click', function() {
+    const progressBar = document.querySelector('.progress');
+    const progressBarInner = progressBar.querySelector('.progress-bar');
+    const importButton = this;
+    
+    // Show progress bar and disable button
+    progressBar.style.display = 'block';
+    importButton.disabled = true;
+    
+    // Start import process
+    fetch('{{ url_for("import_scenarios_from_excel") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert(data.message);
+            // Redirect to index page
+            window.location.href = data.redirect;
+        } else {
+            // Show error message
+            alert(data.message);
+            // Re-enable button
+            importButton.disabled = false;
+            progressBar.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('İçe aktarma sırasında bir hata oluştu.');
+        importButton.disabled = false;
+        progressBar.style.display = 'none';
+    });
+});
+</script>
+{% endblock %} 

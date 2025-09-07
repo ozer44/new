@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">{{ scenario.scenario_name }}</h4>
+            {% if has_step_count_mismatch %}
+            <div class="alert alert-danger mt-2 mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Adım Sayısı Tutarsızlığı:</strong> Ana sayfada {{ index_step_count }} adım görünüyor, ancak bu senaryoda {{ related_scenarios|length }} adım bulunuyor.
+            </div>
+            {% endif %}
+        </div>
+        <div>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('edit_scenario', scenario_id=scenario.id) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-2"></i>Düzenle
+            </a>
+            {% endif %}
+            <a href="{{ url_for('index') }}" class="btn btn-light ms-2">
+                <i class="fas fa-arrow-left me-2"></i>Geri
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Genel Bilgiler - Tam Genişlik -->
+        <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm {% if has_step_count_mismatch %}border-danger{% endif %}">
+                <div class="card-header bg-white py-3 {% if has_step_count_mismatch %}text-danger{% endif %}">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2 {% if has_step_count_mismatch %}text-danger{% else %}text-primary{% endif %}"></i>
+                        Genel Bilgiler
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted d-block mb-2">Durum</label>
+                            <div class="d-flex align-items-center">
+                                <span class="badge {% if scenario.status == 'active' %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                    {{ 'Aktif' if scenario.status == 'active' else 'Pasif' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted d-block mb-2">Adım Sayısı</label>
+                            <span class="badge {% if has_step_count_mismatch %}bg-danger{% else %}bg-primary{% endif %}">
+                                {{ related_scenarios|length }} Adım
+                                {% if has_step_count_mismatch %}
+                                <i class="fas fa-exclamation-circle ms-1" title="Ana sayfada {{ index_step_count }} adım görünüyor"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted d-block mb-2">Çalışma Sıklığı</label>
+                            <span class="badge bg-info">{{ scenario.recurrence }}</span>
+                            {% set repeat_rate = {
+                                'Continually': 'Her 5 dakikada',
+                                'Daily': 'Günde bir kez',
+                                'Weekly': 'Haftada bir kez',
+                                'Monthly': 'Ayda bir kez',
+                                'Folder Monitor': 'Sürekli izleme',
+                                'Weekday': 'Hafta içi her gün',
+                                'Daily (Weekday)': 'Hafta içi günde bir kez'
+                            }.get(scenario.recurrence, '-') %}
+                            <small class="text-muted d-block mt-1">{{ repeat_rate }}</small>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted d-block mb-2">Sorumlu Kişi</label>
+                            <span class="badge bg-secondary">{{ scenario.responsible_person }}</span>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted d-block mb-2">E-posta Bildirimi</label>
+                            {% if scenario.email_notification %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for email in scenario.email_notification.split(';') %}
+                                        {% if email.strip() %}
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-envelope me-1 text-primary"></i>
+                                                {{ email.strip() }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Senaryo Adımları - Tam Genişlik -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-list me-2 text-primary"></i>
+                        Senaryo Adımları
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for related in related_scenarios %}
+                        <div class="list-group-item border-0 {% if related.id == scenario.id %}current-step{% endif %} {% if has_step_count_mismatch %}step-mismatch{% endif %}">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="step-number me-3">
+                                    <span class="badge rounded-pill bg-primary">{{ loop.index }}</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 {% if related.status != 'active' %}text-muted text-decoration-line-through{% endif %}">
+                                            {{ related.scenario_name }}
+                                        </h6>
+                                     
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="step-details ms-5">
+                                <div class="row g-3">
+                                    <div class="col-md-2">
+                                        <label class="text-muted small d-block text-center">
+                                            Type of Action
+                                        </label>
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="badge bg-info {% if related.status != 'active' %}text-decoration-line-through opacity-50{% endif %}">{{ related.type_of_action }}</span>
+                                            <div class="icons-container mt-2">
+                                                {% if related.type_of_action in ['Download', 'Upload'] %}
+                                                    {% if '\\\\' in related.source or '\\\\' in related.destination %}
+                                                    <div class="icon-item">
+                                                        <i class="fas fa-folder-open text-warning" title="Share Folder"></i>
+                                                    </div>
+                                                    {% endif %}
+                                                {% endif %}
+                                                {% if '/' in related.source or '/' in related.destination %}
+                                                    <div class="icon-item">
+                                                        <i class="fas fa-cloud-upload-alt text-info" title="SFTP/FTP"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="text-muted small d-block">
+                                            Kaynak
+                                        </label>
+                                        <p class="mb-0 text-break small {% if related.status != 'active' %}text-muted text-decoration-line-through{% endif %}">
+                                            {{ related.source }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="text-muted small d-block">
+                                            Hedef
+                                        </label>
+                                        <p class="mb-0 text-break small {% if related.status != 'active' %}text-muted text-decoration-line-through{% endif %}">
+                                            {{ related.destination }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.text-break {
+    word-break: break-all;
+}
+
+.list-group-item {
+    padding: 1.25rem;
+    transition: all 0.3s ease-in-out;
+    border-left: 4px solid transparent;
+}
+
+.list-group-item:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left: 4px solid #0d6efd;
+    transform: translateX(5px);
+}
+
+.list-group-item.current-step {
+    border-left: 4px solid #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.step-number {
+    min-width: 40px;
+}
+
+.step-details {
+    padding-top: 0.5rem;
+}
+
+.badge.rounded-pill {
+    padding: 0.5em 1em;
+}
+
+.badge {
+    font-size: 0.875rem;
+    padding: 0.5em 1em;
+    font-weight: 500;
+    transition: all 0.3s ease-in-out;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-sm:hover {
+    transform: translateY(-1px);
+}
+
+.d-flex.flex-column.align-items-center {
+    width: 100%;
+    text-align: center;
+}
+
+.icons-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.icon-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+}
+
+.icon-item:hover {
+    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.icon-item i {
+    font-size: 1.1rem;
+}
+
+.step-mismatch {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.step-mismatch:hover {
+    background-color: rgba(220, 53, 69, 0.08) !important;
+}
+
+.step-mismatch.current-step {
+    border-left: 4px solid #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.08) !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.badge.bg-light {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    font-weight: normal;
+    font-size: 0.875rem;
+    padding: 0.5em 1em;
+    transition: all 0.2s ease-in-out;
+}
+
+.badge.bg-light:hover {
+    background-color: #e9ecef !important;
+}
+</style>
+{% endblock %} 

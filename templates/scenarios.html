@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Senaryolar</h1>
+        <a href="{{ url_for('create_scenario') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Yeni Senaryo
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="scenariosTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Başlık</th>
+                            <th>Sorumlu Kişi</th>
+                            <th>Durum</th>
+                            <th>Oluşturulma Tarihi</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scenario in scenarios %}
+                        <tr>
+                            <td>{{ scenario.id }}</td>
+                            <td>{{ scenario.title }}</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">{{ scenario.responsible_person }}</span>
+                                {% if can_edit_responsible %}
+                                <button class="btn btn-sm btn-outline-primary ms-2 edit-responsible" 
+                                        data-scenario-id="{{ scenario.id }}"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editResponsibleModal">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if scenario.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ scenario.status }}
+                                </span>
+                            </td>
+                            <td>{{ scenario.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('scenario_detail', scenario_id=scenario.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_scenario', scenario_id=scenario.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-danger delete-scenario" data-scenario-id="{{ scenario.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Responsible Person Modal -->
+<div class="modal fade" id="editResponsibleModal" tabindex="-1" aria-labelledby="editResponsibleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editResponsibleModalLabel">Sorumlu Kişiyi Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editResponsibleForm">
+                    <input type="hidden" id="scenarioId">
+                    <div class="mb-3">
+                        <label for="responsiblePerson" class="form-label">Sorumlu Kişi</label>
+                        <select class="form-select" id="responsiblePerson" required>
+                            <option value="">Seçiniz...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveResponsible">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#scenariosTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/tr.json'
+        }
+    });
+
+    // Handle edit button click
+    $('.edit-responsible').click(function() {
+        const scenarioId = $(this).data('scenario-id');
+        $('#scenarioId').val(scenarioId);
+        
+        // Fetch responsible persons
+        $.get('/get-responsible-persons', function(response) {
+            if (response.success) {
+                const select = $('#responsiblePerson');
+                select.empty();
+                select.append('<option value="">Seçiniz...</option>');
+                
+                response.responsible_persons.forEach(function(person) {
+                    select.append(`<option value="${person.name}">${person.name}</option>`);
+                });
+            }
+        });
+    });
+
+    // Handle save button click
+    $('#saveResponsible').click(function() {
+        const scenarioId = $('#scenarioId').val();
+        const responsiblePerson = $('#responsiblePerson').val();
+
+        if (!responsiblePerson) {
+            alert('Lütfen bir sorumlu kişi seçin.');
+            return;
+        }
+
+        $.ajax({
+            url: `/update_responsible_person/${scenarioId}`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                responsible_person: responsiblePerson
+            }),
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message || 'Bir hata oluştu.');
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Bir hata oluştu.');
+            }
+        });
+    });
+});
+
+function assignRole(userId, roleId) {
+    // Validate inputs
+    if (!userId || !roleId) {
+        showAlert('error', 'Kullanıcı ID ve Rol ID gereklidir.');
+        return;
+    }
+    
+    // Log the request data for debugging
+    console.log(`Assigning role ${roleId} to user ${userId}`);
+    
+    // Show loading indicator
+    showAlert('info', 'Rol atanıyor, lütfen bekleyin...');
+    
+    // Prepare the request data
+    const requestData = {
+        user_id: userId,
+        role_id: roleId
+    };
+    
+    console.log('Request data:', requestData);
+    
+    // Use XMLHttpRequest for more control over the request
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/admin/assign-role', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+        console.log('XHR Status:', xhr.status);
+        console.log('XHR Response Text:', xhr.responseText);
+        
+        try {
+            const response = JSON.parse(xhr.responseText);
+            console.log('Parsed Response:', response);
+            
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (response.success) {
+                    showAlert('success', response.message);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showAlert('error', response.message || 'Rol atama işlemi başarısız oldu.');
+                }
+            } else {
+                // Show the error message from the server
+                showAlert('error', response.message || 'Rol atama işlemi başarısız oldu.');
+            }
+        } catch (e) {
+            console.error('Error parsing response:', e);
+            showAlert('error', 'Sunucu yanıtı işlenirken bir hata oluştu.');
+        }
+    };
+    
+    xhr.onerror = function() {
+        console.error('XHR Error:', xhr.status, xhr.statusText);
+        showAlert('error', 'Sunucu bağlantısında bir sorun oluştu. Lütfen daha sonra tekrar deneyin.');
+    };
+    
+    xhr.send(JSON.stringify(requestData));
+}
+
+// Helper function to show alerts
+function showAlert(type, message) {
+    // Check if alert container exists, if not create it
+    let alertContainer = $('#alertContainer');
+    if (alertContainer.length === 0) {
+        alertContainer = $('<div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>');
+        $('body').append(alertContainer);
+    }
+    
+    // Create alert element
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 
+                      type === 'info' ? 'alert-info' : 'alert-warning';
+    
+    const alert = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            <strong>${type === 'success' ? 'Başarılı!' : type === 'error' ? 'Hata!' : type === 'info' ? 'Bilgi:' : 'Uyarı!'}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `);
+    
+    // Add to container and auto-remove after 5 seconds
+    alertContainer.append(alert);
+    setTimeout(() => {
+        alert.alert('close');
+    }, 5000);
+}
+</script>
+{% endblock %} 

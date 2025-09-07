@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-upload me-2 text-primary"></i>
+                Log Yükle
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div class="row g-3">
+                    <!-- Log Type -->
+                    <div class="col-md-12">
+                        <label for="log_type" class="form-label">Log Tipi</label>
+                        <select class="form-select" id="log_type" name="log_type" required>
+                            <option value="manual">Manuel</option>
+                            <option value="auto">Otomatik</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Lütfen log tipini seçin.
+                        </div>
+                    </div>
+
+                    <!-- Manual File Upload -->
+                    <div class="col-12" id="manualUploadSection">
+                        <label for="log_file" class="form-label">Log Dosyası</label>
+                        <input type="file" class="form-control" id="log_file" name="log_file" accept=".log,.txt">
+                        <div class="invalid-feedback">
+                            Lütfen bir log dosyası seçin.
+                        </div>
+                        <div class="form-text">
+                            Desteklenen formatlar: .log, .txt<br>
+                            Not: Yüklenen log dosyası sistem genelinde işlenecek ve ilgili senaryolar otomatik olarak eşleştirilecektir.
+                        </div>
+                    </div>
+
+                    <!-- Auto Import Info -->
+                    <div class="col-12 d-none" id="autoImportSection">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Otomatik Log İşleme:</strong>
+                            <p class="mb-0">Sistem, Uploads/Logs klasöründeki tüm log dosyalarını otomatik olarak işleyecektir.</p>
+                            <ul class="mb-0 mt-2">
+                                <li>Desteklenen formatlar: .log, .txt</li>
+                                <li>İşlenen dosyalar otomatik olarak arşivlenecektir</li>
+                                <li>Hatalı dosyalar "failed" klasörüne taşınacaktır</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-upload me-2"></i>
+                            <span id="submitButtonText">Yükle</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Upload Progress -->
+            <div class="mt-4 d-none" id="uploadProgress">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: 0%"
+                         id="progressBar">
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block" id="progressText">
+                    Yükleniyor...
+                </small>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mt-4" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function () {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            } else {
+                showProgress()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+
+// Toggle sections based on log type
+document.getElementById('log_type').addEventListener('change', function() {
+    const manualSection = document.getElementById('manualUploadSection');
+    const autoSection = document.getElementById('autoImportSection');
+    const logFileInput = document.getElementById('log_file');
+    const submitButtonText = document.getElementById('submitButtonText');
+
+    if (this.value === 'auto') {
+        manualSection.classList.add('d-none');
+        autoSection.classList.remove('d-none');
+        logFileInput.required = false;
+        submitButtonText.textContent = 'İşlemi Başlat';
+    } else {
+        manualSection.classList.remove('d-none');
+        autoSection.classList.add('d-none');
+        logFileInput.required = true;
+        submitButtonText.textContent = 'Yükle';
+    }
+});
+
+function showProgress() {
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const logType = document.getElementById('log_type').value;
+
+    progressDiv.classList.remove('d-none');
+    uploadBtn.disabled = true;
+
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 30;
+        if (progress > 90) {
+            clearInterval(interval);
+            progress = 90;
+        }
+        progressBar.style.width = progress + '%';
+        progressText.textContent = logType === 'auto' ? 
+            `Logs klasörü işleniyor... ${Math.round(progress)}%` :
+            `Yükleniyor... ${Math.round(progress)}%`;
+    }, 500);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}MFT Tool{% endblock %}</title>
+    <!-- Add session timeout data attribute -->
+    <meta name="session-timeout" content="{{ get_system_settings().session_timeout if get_system_settings() else 30 }}">
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='../static/css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="{{ url_for('static', filename='../static/css/all.min.css') }}" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="{{ url_for('static', filename='../static/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
+    <!-- Toastr CSS -->
+    <link href="{{ url_for('static', filename='../static/css/toastr.min.css') }}" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
+    <!-- jQuery -->
+    <script src="{{ url_for('static', filename='../static/js/jquery.min.js') }}"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="{{ url_for('static', filename='../static/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- DataTables JS -->
+    <script src="{{ url_for('static', filename='../static/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='../static/js/dataTables.bootstrap5.min.js') }}"></script>
+    <!-- Toastr JS -->
+    <script src="{{ url_for('static', filename='../static/js/toastr.min.js') }}"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root {
+            /* Light theme variables */
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --text-color: #1f2937;
+            --bg-color: #f9fafb;
+            --border-color: #e5e7eb;
+            --sidebar-width: 250px;
+            --sidebar-collapsed-width: 70px;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #e5e7eb;
+            --table-header-bg: #f9fafb;
+            --hover-bg: #f3f4f6;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #818cf8;
+            --primary-dark: #6366f1;
+            --text-color: #e5e7eb;
+            --bg-color: #111827;
+            --border-color: #374151;
+            --card-bg: #1f2937;
+            --input-bg: #374151;
+            --input-border: #4b5563;
+            --table-header-bg: #1f2937;
+            --hover-bg: #2d3748;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        .sidebar {
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            width: var(--sidebar-width);
+            z-index: 1000;
+            transition: all 0.3s;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-color) !important;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 0.25rem 0.5rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+        }
+
+        .sidebar .badge {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed .badge {
+            right: 0.25rem;
+            min-width: 18px;
+            height: 18px;
+            font-size: 0.75rem;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .nav-link-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link {
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .sidebar.collapsed .user-info {
+            display: none;
+        }
+
+        .sidebar.collapsed .user-profile {
+            padding: 0.5rem;
+            justify-content: center;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: var(--hover-bg);
+            color: var(--primary-color) !important;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .main-content.expanded {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        .navbar {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .user-profile .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+            transition: opacity 0.3s;
+        }
+
+        .user-name {
+            font-weight: 500;
+            margin: 0;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+        }
+
+        .sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            border-radius: 0.5rem;
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .sidebar-toggle i {
+            transition: transform 0.3s;
+            font-size: 1.25rem;
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(90deg);
+        }
+
+        .sidebar-brand {
+            font-weight: 600;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 1.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-brand:hover {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .sidebar.collapsed .sidebar-brand {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: var(--sidebar-collapsed-width);
+            }
+            .main-content {
+                margin-left: var(--sidebar-collapsed-width);
+            }
+            .sidebar.expanded {
+                width: var(--sidebar-width);
+            }
+            .main-content.collapsed {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        /* Tooltip styles */
+        [data-title] {
+            position: relative;
+            cursor: pointer;
+        }
+
+        [data-title]:hover:after {
+            content: attr(data-title);
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 99999;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 10px;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-title]:after {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .sidebar.collapsed .nav-link[data-title]:hover:after {
+            left: 60px;
+            margin-left: 10px;
+        }
+
+        .sidebar.collapsed .nav-link.active[data-title]:hover:after {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        /* Submenu tooltip adjustments */
+        .collapse .nav-link[data-title]:hover:after {
+            left: calc(100% - 20px);
+        }
+
+        .sidebar.collapsed .collapse .nav-link[data-title]:hover:after {
+            left: 60px;
+        }
+
+        /* Navigation styles */
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Ensure tooltips are visible over other elements */
+        .sidebar {
+            z-index: 1050;
+        }
+
+        .collapse.show {
+            z-index: 1040;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-color);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            border-color: var(--primary-color);
+            color: var(--text-color);
+            box-shadow: 0 0 0 0.25rem rgba(var(--primary-color), 0.25);
+        }
+
+        .table {
+            color: var(--text-color);
+        }
+
+        .table thead th {
+            background-color: var(--table-header-bg);
+            border-color: var(--border-color);
+        }
+
+        .table td, .table th {
+            border-color: var(--border-color);
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+
+        .alert {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .text-muted {
+            color: var(--text-color) !important;
+            opacity: 0.7;
+        }
+
+        .nav-link .fa-chevron-down {
+            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+        }
+
+        .nav-link[aria-expanded="true"] .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .sidebar.collapsed .nav-link .fa-chevron-down {
+            display: none;
+        }
+
+        .collapse {
+            transition: all 0.3s ease;
+        }
+
+        .collapse .nav-link {
+            padding-left: 2.5rem;
+            font-size: 0.9rem;
+        }
+
+        .sidebar.collapsed .collapse.show {
+            display: none;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-link i:not(.fa-chevron-down) {
+            width: 20px;
+            text-align: center;
+            margin-right: 0.5rem;
+        }
+
+        .sidebar.collapsed .nav-link i:not(.fa-chevron-down) {
+            margin-right: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <a href="{{ url_for('index') }}" class="sidebar-brand">MFT Tool</a>
+            <button class="sidebar-toggle" id="sidebarToggle" title="Menüyü Daralt/Genişlet">
+                <i class="fas fa-bars"></i>
+                <span class="nav-link-text">Menu</span>
+            </button>
+        </div>
+
+        <!-- User Profile -->
+        <div class="user-profile" style="cursor: pointer;" onclick="window.location.href='{{ url_for('profile') }}'">
+            {% if current_user.is_authenticated %}
+                {% if current_user.profile_photo %}
+                <img src="data:image/jpeg;base64,{{ current_user.profile_photo }}" 
+                     class="rounded-circle avatar" 
+                     alt="{{ current_user.username }}">
+                {% else %}
+                <div class="avatar">
+                    {{ current_user.username[:2].upper() if current_user.username else 'GU' }}
+                </div>
+                {% endif %}
+                <div class="user-info">
+                    <h6 class="mb-0">{{ current_user.full_name or current_user.username }}</h6>
+                    <small class="text-muted">Profil Ayarları</small>
+                </div>
+            {% else %}
+                <div class="avatar">
+                    GU
+                </div>
+                <div class="user-info">
+                    <h6 class="mb-0">Guest</h6>
+                    <small class="text-muted">Giriş Yapın</small>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Navigation -->
+        <ul class="nav flex-column mt-3">
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
+                   href="{{ url_for('index') }}" 
+                   data-title="Ana sayfaya git"
+                   data-bs-toggle="tooltip">
+                    <i class="fas fa-home me-2"></i>
+                    <span class="nav-link-text">Ana Sayfa</span>
+                </a>
+            </li>
+
+            <!-- Senaryo İşlemleri -->
+            {% if current_user.is_admin or 'scenario_manager' in current_user.roles|map(attribute='name')|list %}
+            <li class="nav-item">
+                <a class="nav-link" 
+                   href="#" 
+                   data-bs-toggle="collapse" 
+                   data-bs-target="#scenarioCollapse" 
+                   aria-expanded="false"
+                   aria-controls="scenarioCollapse"
+                   data-title="Senaryo işlemlerini yönet">
+                    <i class="fas fa-file-alt me-2"></i>
+                    <span class="nav-link-text">Senaryo İşlemleri</span>
+                    <i class="fas fa-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse {% if request.endpoint in ['add_scenario', 'import_scenarios', 'import_json', 'export_scenarios'] %}show{% endif %}" id="scenarioCollapse">
+                    <ul class="nav flex-column ms-3">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'import_scenarios' %}active{% endif %}" href="{{ url_for('import_scenarios') }}" data-title="Excel dosyasından senaryoları içe aktar">
+                                <i class="fas fa-file-excel me-2"></i>
+                                <span class="nav-link-text">Excel'den İçe Aktar</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+
+            <!-- Excel Export -->
+            {% if current_user.is_admin or 'excel_export' in current_user.roles|map(attribute='name')|list %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'export_scenarios' %}active{% endif %}" href="{{ url_for('export_scenarios') }}" data-title="Senaryoları dışa aktar">
+                    <i class="fas fa-file-export me-2"></i>
+                    <span class="nav-link-text">Excel'e Dışa Aktar</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Yönetim -->
+            {% if current_user.is_admin or 'user_manager' in current_user.roles|map(attribute='name')|list or 'role_manager' in current_user.roles|map(attribute='name')|list %}
+            <li class="nav-item">
+                <a class="nav-link" 
+                   href="#" 
+                   data-bs-toggle="collapse" 
+                   data-bs-target="#adminCollapse" 
+                   aria-expanded="false"
+                   aria-controls="adminCollapse"
+                   data-title="Yönetim menüsünü aç">
+                    <i class="fas fa-cog me-2"></i>
+                    <span class="nav-link-text">Yönetim</span>
+                    <i class="fas fa-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse {% if request.endpoint in ['user_management', 'manage_roles', 'allowed_emails', 'system_settings'] %}show{% endif %}" id="adminCollapse">
+                    <ul class="nav flex-column ms-3">
+                        {% if current_user.is_admin or 'user_manager' in current_user.roles|map(attribute='name')|list %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'user_management' %}active{% endif %}" 
+                               href="{{ url_for('user_management') }}" 
+                               data-title="Kullanıcı yönetimini aç">
+                                <i class="fas fa-users me-2"></i>
+                                <span class="nav-link-text">Kullanıcı Yönetimi</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if current_user.is_admin or 'role_manager' in current_user.roles|map(attribute='name')|list or 'user_manager' in current_user.roles|map(attribute='name')|list %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'manage_roles' %}active{% endif %}" 
+                               href="{{ url_for('manage_roles') }}" 
+                               data-title="Rol yönetimini aç">
+                                <i class="fas fa-user-tag me-2"></i>
+                                <span class="nav-link-text">Rol Yönetimi</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'system_settings' %}active{% endif %}" 
+                               href="{{ url_for('system_settings') }}" 
+                               data-title="Sistem ayarlarını düzenle">
+                                <i class="fas fa-sliders-h me-2"></i>
+                                <span class="nav-link-text">Sistem Ayarları</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+
+            <!-- Log Yönetimi -->
+            {% if current_user.is_admin or 'log_manager' in current_user.roles|map(attribute='name')|list %}
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'auth_logs' %}active{% endif %}" 
+                   href="{{ url_for('auth_logs') }}" 
+                   data-title="İşlem loglarını görüntüle">
+                    <i class="fas fa-history me-2"></i>
+                    <span class="nav-link-text">İşlem Logları</span>
+                </a>
+            </li>
+
+            {% endif %}
+
+
+            <!-- REST API Bağlantıları -->
+            {% if current_user.is_admin or 'scenario_manager' in current_user.roles|map(attribute='name')|list %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('rest_api_connections') }}">
+                    <i class="fas fa-plug"></i> REST API Ayarları
+                </a>
+            </li>
+
+            {% endif %}
+			<!-- Çıkış -->
+            <li class="nav-item mt-3">
+                <a class="nav-link text-danger" href="{{ url_for('logout') }}" data-title="Oturumu sonlandır">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    <span class="nav-link-text">Çıkış Yap</span>
+                </a>
+            </li>
+        </ul>
+        </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    {% block scripts %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all Bootstrap Collapse instances
+            const collapseElements = document.querySelectorAll('.collapse');
+            collapseElements.forEach(collapseEl => {
+                new bootstrap.Collapse(collapseEl, {
+                    toggle: false
+                });
+            });
+
+            // Handle dropdown menu clicks
+            document.querySelectorAll('.nav-link[data-bs-toggle="collapse"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const targetId = this.getAttribute('data-bs-target');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        const bsCollapse = bootstrap.Collapse.getInstance(targetElement) || 
+                                         new bootstrap.Collapse(targetElement);
+                        
+                        // Toggle the collapse
+                        bsCollapse.toggle();
+                        
+                        // Update aria-expanded attribute
+                        const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                        this.setAttribute('aria-expanded', !isExpanded);
+                        
+                        // Update chevron icon rotation
+                        const chevron = this.querySelector('.fa-chevron-down');
+                        if (chevron) {
+                            chevron.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                        }
+                    }
+                });
+            });
+
+            // Close other dropdowns when one is opened
+            document.querySelectorAll('.collapse').forEach(collapseEl => {
+                collapseEl.addEventListener('show.bs.collapse', function() {
+                    document.querySelectorAll('.collapse.show').forEach(openCollapse => {
+                        if (openCollapse !== this) {
+                            const bsCollapse = bootstrap.Collapse.getInstance(openCollapse);
+                            if (bsCollapse) {
+                                bsCollapse.hide();
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Flash mesajlarını otomatik kapat
+            const flashMessages = document.querySelectorAll('.alert');
+            flashMessages.forEach(function(message) {
+                // Önce fade-out animasyonunu başlat
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    // Animasyon bittikten sonra elementi kaldır
+                    setTimeout(function() {
+                        message.remove();
+                    }, 500);
+                }, 3000); // 3 saniye sonra kapanacak
+            });
+
+            // Session timeout check
+            let sessionTimeout = parseInt(document.querySelector('meta[name="session-timeout"]').content) * 60 * 1000;
+            let lastActivity = new Date().getTime();
+
+            function checkSession() {
+                let currentTime = new Date().getTime();
+                let timeSinceLastActivity = currentTime - lastActivity;
+
+                // If session timeout reached, redirect to login
+                if (timeSinceLastActivity > sessionTimeout) {
+                    window.location.href = "{{ url_for('login') }}";
+                }
+            }
+
+            // Check session every minute
+            setInterval(checkSession, 60000);
+
+            // Reset timer on user activity
+            function resetTimer() {
+                lastActivity = new Date().getTime();
+            }
+
+            // Monitor user activity
+            document.addEventListener('mousemove', resetTimer);
+            document.addEventListener('keypress', resetTimer);
+            document.addEventListener('click', resetTimer);
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    placement: 'right',
+                    trigger: 'hover'
+                })
+            })
+
+            // Tema kontrolü
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+                localStorage.setItem('theme', theme);
+            }
+
+            // Kullanıcının tema tercihini al ve uygula
+            {% if current_user.is_authenticated %}
+            const userTheme = '{{ current_user.theme }}';
+            applyTheme(userTheme);
+            {% else %}
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+            {% endif %}
+
+            // Tema değişikliğini dinle
+            window.addEventListener('themeChanged', function(e) {
+                applyTheme(e.detail.theme);
+            });
+
+            // Sidebar kontrolü
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mediaQuery = window.matchMedia('(max-width: 768px)');
+            const toggleText = sidebarToggle.querySelector('.nav-link-text');
+
+            // Kullanıcının menü tercihini al
+            {% if current_user.is_authenticated %}
+            const sidebarCollapsed = {{ 'true' if current_user.sidebar_collapsed else 'false' }};
+            {% else %}
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            {% endif %}
+
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+                toggleText.textContent = 'Menu';
+            }
+
+            // Function to handle sidebar toggle
+            function toggleSidebar() {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+                
+                // Update toggle button text
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleText.textContent = 'Menu';
+                } else {
+                    toggleText.textContent = 'Menu';
+                }
+                
+                // Store the state in localStorage
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            }
+
+            // Add click event listener to toggle button
+            sidebarToggle.addEventListener('click', toggleSidebar);
+
+            // Add click event listeners to menu items
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Only handle clicks when sidebar is collapsed
+                    if (sidebar.classList.contains('collapsed')) {
+                        // If the link has a collapse toggle, prevent the default action
+                        if (this.getAttribute('data-bs-toggle') === 'collapse') {
+                            e.preventDefault();
+                            // Expand the sidebar
+                            sidebar.classList.remove('collapsed');
+                            mainContent.classList.remove('expanded');
+                            localStorage.setItem('sidebarCollapsed', 'false');
+                            
+                            // After sidebar expands, trigger the collapse toggle
+                            setTimeout(() => {
+                                const collapseTarget = this.getAttribute('data-bs-target');
+                                const collapseElement = document.querySelector(collapseTarget);
+                                const bsCollapse = new bootstrap.Collapse(collapseElement);
+                                bsCollapse.toggle();
+                            }, 300);
+                        }
+                    }
+                });
+            });
+
+            // Handle mobile responsiveness
+            function handleMobileLayout(e) {
+                if (e.matches) {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('expanded');
+                    toggleText.textContent = 'Menu';
+                } else {
+                    if (!sidebarCollapsed) {
+                        sidebar.classList.remove('collapsed');
+                        mainContent.classList.remove('expanded');
+                        toggleText.textContent = 'Menu';
+                    }
+                }
+            }
+
+            // Initial check for mobile layout
+            handleMobileLayout(mediaQuery);
+
+            // Listen for window resize
+            mediaQuery.addListener(handleMobileLayout);
+        });
+    </script>
+</body>
+</html>

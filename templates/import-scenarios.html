@@ -1,0 +1,567 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Add SweetAlert2 CDN -->
+<link href="{{ url_for('static', filename='css/sweetalert2.min.css') }}" rel="stylesheet">
+<script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
+
+<div class="container-fluid">
+    <div class="card shadow">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Senaryo İçe Aktarma</h6>
+            {% if current_user.is_admin %}
+            <button class="btn btn-danger" id="clearAllScenarios" onclick="confirmClearAll()">
+                <i class="fas fa-trash-alt me-2"></i>Tüm Senaryoları Temizle
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Dosya Yükleme Alanı -->
+            <div id="uploadArea" class="upload-area mb-4">
+                <div class="upload-content">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                    <h5>Dosya Yükle</h5>
+                    <p class="text-muted">Excel (.xlsx) veya CSV dosyası yükleyin</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.csv" class="d-none">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open me-2"></i>Dosya Seç
+                    </button>
+                </div>
+            </div>
+
+            <!-- Önizleme Alanı -->
+            <div id="previewArea" class="preview-area" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Toplam Senaryo</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Aktif Senaryo</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="activeCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Pasif Senaryo</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="passiveCount">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-pause-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Butonları buraya taşıyoruz -->
+                <div class="mt-4 mb-4 text-center">
+                    <button class="btn btn-success btn-lg px-4" id="startImport">
+                        <i class="fas fa-file-import me-2"></i>İçe Aktarmayı Başlat
+                    </button>
+                    <button class="btn btn-secondary btn-lg px-4 ms-2" id="cancelImport">
+                        <i class="fas fa-times me-2"></i>İptal
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="previewTable">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 100px;">Özel ID</th>
+                                <th style="min-width: 150px;">Senaryo Adı</th>
+                                <th style="min-width: 100px;">Tekrar</th>
+                                <th style="min-width: 100px;">Tekrar Oranı</th>
+                                <th style="min-width: 100px;">İşlem Tipi</th>
+                                <th style="min-width: 100px;">Tip</th>
+                                <th style="min-width: 100px;">Adım Sayısı</th>
+                                <th style="min-width: 150px;">Kaynak</th>
+                                <th style="min-width: 150px;">Hedef</th>
+                                <th style="min-width: 100px;">Durum</th>
+                                <th style="min-width: 100px;">Klasör ID</th>
+                                <th style="min-width: 100px;">Departman</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    background-color: #f8f9fc;
+    transition: all 0.3s ease;
+}
+
+.upload-area.dragover {
+    border-color: #4e73df;
+    background-color: #eaecf4;
+}
+
+.upload-content {
+    color: #858796;
+}
+
+.preview-area {
+    margin-top: 20px;
+}
+
+.table th {
+    background-color: #f8f9fc;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 0.5em 0.75em;
+}
+
+.badge-success {
+    background-color: #1cc88a;
+}
+
+.badge-danger {
+    background-color: #e74a3b;
+}
+
+.badge-warning {
+    background-color: #f6c23e;
+}
+
+.progress {
+    height: 25px;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    font-size: 14px;
+    line-height: 25px;
+    font-weight: 500;
+}
+</style>
+
+<script>
+let currentFile = null;
+
+// Sayfa yüklendiğinde dönüştürülmüş dosya varsa otomatik yükle
+document.addEventListener('DOMContentLoaded', function() {
+    const convertedFile = '{{ converted_file }}';
+    if (convertedFile) {
+        // Önce dönüştürülmüş dosyayı sunucudan al
+        fetch(`/import-scenarios/get-converted-file/${convertedFile}`)
+            .then(response => response.blob())
+            .then(blob => {
+                // Blob'u File nesnesine dönüştür
+                const file = new File([blob], convertedFile, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                currentFile = file; // currentFile'ı güncelle
+                
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                // Dosyayı yükle
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                return fetch('/import-scenarios/preview', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updatePreview(data);
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                showError('Dosya yüklenirken bir hata oluştu');
+            });
+    }
+});
+
+// Dosya sürükle-bırak işlemleri
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+    uploadArea.classList.add('dragover');
+}
+
+function unhighlight(e) {
+    uploadArea.classList.remove('dragover');
+}
+
+uploadArea.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    handleFiles(files);
+}
+
+fileInput.addEventListener('change', function() {
+    handleFiles(this.files);
+});
+
+function handleFiles(files) {
+    if (files.length > 0) {
+        uploadFile(files[0]);
+    }
+}
+
+function uploadFile(file) {
+    if (!file.name.match(/\.(xlsx|csv)$/)) {
+        showError('Lütfen sadece Excel (.xlsx) veya CSV dosyası yükleyin');
+        return;
+    }
+
+    currentFile = file;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Yükleme göstergesi
+    uploadArea.innerHTML = `
+        <div class="upload-content">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+            <h5>Dosya Yükleniyor</h5>
+            <p class="text-muted">Lütfen bekleyin...</p>
+        </div>
+    `;
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch('/import-scenarios/preview', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updatePreview(data);
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        showError('Dosya yüklenirken bir hata oluştu');
+    });
+}
+
+function updatePreview(data) {
+    // İstatistikleri güncelle
+    document.getElementById('totalCount').textContent = data.total;
+    document.getElementById('activeCount').textContent = data.active;
+    document.getElementById('passiveCount').textContent = data.passive;
+
+    // Tablo içeriğini güncelle
+    const tbody = document.getElementById('previewTableBody');
+    tbody.innerHTML = '';
+
+    data.preview.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.custom_id}</td>
+            <td>${row.scenario_name}</td>
+            <td>${row.recurrence}</td>
+            <td>${row.repeat_rate}</td>
+            <td>${row.type_of_action}</td>
+            <td>${row.type}</td>
+            <td>${row.step_count}</td>
+            <td>${row.source}</td>
+            <td>${row.destination}</td>
+            <td><span class="badge badge-${row.status === 'active' ? 'success' : 'warning'}">${row.status}</span></td>
+            <td>${row.folder_id}</td>
+            <td>${row.department}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Önizleme alanını göster
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('previewArea').style.display = 'block';
+}
+
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Hata',
+        text: message,
+        confirmButtonText: 'Tekrar Dene',
+        confirmButtonColor: '#4e73df',
+        timer: 3000,
+        timerProgressBar: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            location.reload();
+        }
+    });
+}
+
+// İçe aktarma işlemleri
+document.getElementById('startImport').addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    if (!currentFile) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Hata',
+            text: 'Lütfen önce bir dosya seçin',
+            confirmButtonText: 'Tamam',
+            timer: 3000,
+            timerProgressBar: true
+        });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    const startImportBtn = document.getElementById('startImport');
+    const originalText = startImportBtn.innerHTML;
+    startImportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>İçe Aktarılıyor...';
+    startImportBtn.disabled = true;
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        if (progress < 90) {
+            progress += Math.random() * 10;
+            progress = Math.min(progress, 90);
+            Swal.update({
+                html: `
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-file-import fa-3x text-primary"></i>
+                        </div>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: ${progress}%" 
+                                 aria-valuenow="${progress}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${Math.round(progress)}%
+                            </div>
+                        </div>
+                        <p class="text-muted">Senaryolar içe aktarılıyor... (${Math.round(progress)}%)</p>
+                    </div>
+                `
+            });
+        }
+    }, 500);
+
+    // Show initial progress popup
+    Swal.fire({
+        title: 'İçe Aktarma İşlemi',
+        html: `
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-file-import fa-3x text-primary"></i>
+                </div>
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: 0%" 
+                         aria-valuenow="0" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        0%
+                    </div>
+                </div>
+                <p class="text-muted">Senaryolar içe aktarılıyor...</p>
+            </div>
+        `,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+    });
+
+    fetch('/import-scenarios/import', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Başarılı!',
+                text: 'Senaryolar başarıyla içe aktarıldı.',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                window.location.href = '/';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata',
+                text: data.message,
+                confirmButtonText: 'Tamam',
+                timer: 3000,
+                timerProgressBar: true
+            });
+            startImportBtn.innerHTML = originalText;
+            startImportBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        Swal.fire({
+            icon: 'error',
+            title: 'Hata',
+            text: 'İçe aktarma sırasında bir hata oluştu',
+            confirmButtonText: 'Tamam',
+            timer: 3000,
+            timerProgressBar: true
+        });
+        startImportBtn.innerHTML = originalText;
+        startImportBtn.disabled = false;
+    });
+});
+
+document.getElementById('cancelImport').addEventListener('click', function() {
+    currentFile = null;
+    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('previewArea').style.display = 'none';
+    fileInput.value = '';
+});
+
+function confirmClearAll() {
+    Swal.fire({
+        title: 'Emin misiniz?',
+        text: 'Tüm senaryoları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74a3b',
+        cancelButtonColor: '#858796',
+        confirmButtonText: 'Evet, sil!',
+        cancelButtonText: 'İptal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('/import-scenarios/clear-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Senaryolar silinirken bir hata oluştu.');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Başarılı!',
+                        text: data.message,
+                        confirmButtonText: 'Tamam',
+                        timer: 3000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'İşlem Başarılı',
+                        text: data.message,
+                        confirmButtonText: 'Tamam',
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Hata',
+                    text: error.message || 'Senaryolar silinirken bir hata oluştu.',
+                    confirmButtonText: 'Tamam',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        }
+    });
+}
+</script>
+{% endblock %} 

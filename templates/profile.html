@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <!-- Profil Kartı -->
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="avatar-circle mb-3 mx-auto">
+                        {{ current_user.username[:2].upper() }}
+                    </div>
+                    <h5 class="card-title">{{ current_user.username }}</h5>
+                    <p class="text-muted">{% if current_user.is_admin %}Yönetici{% else %}Kullanıcı{% endif %}</p>
+                    <p class="text-muted small">Üyelik: {{ current_user.created_at.strftime('%d.%m.%Y') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Ayarlar Formu -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Profil Ayarları</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('profile') }}">
+                        {{ form.csrf_token }}
+                        
+                        <!-- Varsayılan Açılış Sayfası -->
+                        <div class="mb-3">
+                            <label class="form-label">Varsayılan Açılış Sayfası</label>
+                            <select name="default_landing_page" class="form-select">
+                                <option value="index" {% if current_user.default_landing_page == 'index' %}selected{% endif %}>Ana Sayfa</option>
+                                {% if current_user.is_admin %}
+                                <option value="add_scenario" {% if current_user.default_landing_page == 'add_scenario' %}selected{% endif %}>Yeni Senaryo</option>
+                                <option value="import_scenarios" {% if current_user.default_landing_page == 'import_scenarios' %}selected{% endif %}>Excel'den İçe Aktar</option>
+                                <option value="import_json" {% if current_user.default_landing_page == 'import_json' %}selected{% endif %}>JSON'dan İçe Aktar</option>
+                                <option value="change_requests" {% if current_user.default_landing_page == 'change_requests' %}selected{% endif %}>Bekleyen Değişiklikler</option>
+                                {% endif %}
+                            </select>
+                            <div class="form-text">Giriş yaptığınızda açılacak ilk sayfa</div>
+                        </div>
+
+                        <!-- Tema Seçimi -->
+                        <div class="mb-3">
+                            <label class="form-label">Tema</label>
+                            <select name="theme" class="form-select">
+                                <option value="light" {% if current_user.theme == 'light' %}selected{% endif %}>Açık Tema</option>
+                                <option value="dark" {% if current_user.theme == 'dark' %}selected{% endif %}>Koyu Tema</option>
+                            </select>
+                        </div>
+
+                        <!-- Menü Durumu -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="sidebar_collapsed" 
+                                       {% if current_user.sidebar_collapsed %}checked{% endif %}>
+                                <label class="form-check-label">Menüyü Otomatik Daralt</label>
+                            </div>
+                            <div class="form-text">Sayfayı açtığınızda menünün daraltılmış olarak başlaması</div>
+                        </div>
+
+                        <!-- E-posta Bildirimleri -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="show_email_notifications"
+                                       {% if current_user.show_email_notifications %}checked{% endif %}>
+                                <label class="form-check-label">E-posta Bildirimleri</label>
+                            </div>
+                            <div class="form-text">Değişiklik istekleri ve sistem güncellemeleri hakkında e-posta al</div>
+                        </div>
+
+                        <!-- Sayfa Başına Öğe Sayısı -->
+                        <div class="mb-3">
+                            <label class="form-label">Sayfa Başına Öğe Sayısı</label>
+                            <select name="items_per_page" class="form-select">
+                                <option value="10" {% if current_user.items_per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if current_user.items_per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if current_user.items_per_page == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if current_user.items_per_page == 100 %}selected{% endif %}>100</option>
+                            </select>
+                            <div class="form-text">Listelerde gösterilecek öğe sayısı</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Ayarları Kaydet</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 100px;
+    height: 100px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: 500;
+}
+</style>
+{% endblock %} 

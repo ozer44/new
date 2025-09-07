@@ -1,0 +1,27 @@
+<!-- Dönüştür Butonu -->
+<button id="convertButton" class="btn btn-primary mb-3">
+    <i class="fas fa-file-export me-2"></i>Excel'e Dönüştür
+</button>
+
+<form id="jsonToExcelForm" method="post" action="{{ url_for('json_to_excel') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="json_data" id="jsonDataInput">
+</form>
+
+<script>
+// JSON'dan Excel'e dönüştür
+$("#convertButton").click(function() {
+    try {
+        // JSON verisini al
+        var jsonData = editor.getValue();
+        
+        // JSON verisini input alanına yerleştir
+        $("#jsonDataInput").val(jsonData);
+        
+        // Formu gönder
+        $("#jsonToExcelForm").submit();
+    } catch (e) {
+        toastr.error('JSON verisi dönüştürülürken bir hata oluştu: ' + e.message);
+    }
+});
+</script> 

@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2 text-primary"></i>
+                    Log Görüntüleyici
+                </h5>
+                <div>
+                    <button class="btn btn-outline-secondary" data-toggle="modal" data-target="#filterModal">
+                        <i class="fa fa-filter"></i> Filtrele
+                    </button>
+                    <a href="{{ url_for('export_logs') }}{{ '?' + request.query_string.decode() if request.query_string else '' }}" class="btn btn-success">
+                        <i class="fa fa-file-excel"></i> Excel'e Aktar
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filters -->
+            <form method="GET" class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">Senaryo</label>
+                    <select class="form-select" name="scenario_id">
+                        <option value="">Tümü</option>
+                        {% for scenario in scenarios %}
+                        <option value="{{ scenario.id }}" {% if request.args.get('scenario_id')|int == scenario.id %}selected{% endif %}>
+                            {{ scenario.scenario_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Log Tipi</label>
+                    <select class="form-select" name="type">
+                        <option value="">Tümü</option>
+                        <option value="manual" {% if request.args.get('type') == 'manual' %}selected{% endif %}>Manuel</option>
+                        <option value="auto" {% if request.args.get('type') == 'auto' %}selected{% endif %}>Otomatik</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Seviye</label>
+                    <select class="form-select" name="level">
+                        <option value="">Tümü</option>
+                        <option value="INFO" {% if request.args.get('level') == 'INFO' %}selected{% endif %}>INFO</option>
+                        <option value="WARNING" {% if request.args.get('level') == 'WARNING' %}selected{% endif %}>WARNING</option>
+                        <option value="ERROR" {% if request.args.get('level') == 'ERROR' %}selected{% endif %}>ERROR</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Başlangıç Tarihi</label>
+                    <input type="date" class="form-control" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Bitiş Tarihi</label>
+                    <input type="date" class="form-control" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Logs Table -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Tarih/Saat</th>
+                            <th>Senaryo</th>
+                            <th>Seviye</th>
+                            <th>Mesaj</th>
+                            <th>Kaynak</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs.items %}
+                        <tr>
+                            <td data-order="{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}">
+                                {{ log.timestamp.strftime('%d.%m.%Y %H:%M:%S') }}
+                            </td>
+                            <td>
+                                {% if log.scenario %}
+                                <a href="{{ url_for('scenario_detail', scenario_id=log.scenario.id) }}" class="text-decoration-none">
+                                    {{ log.scenario.scenario_name }}
+                                </a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if log.level == 'INFO' else 'warning' if log.level == 'WARNING' else 'danger' }}">
+                                    {{ log.level }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 400px;" title="{{ log.message }}">
+                                    {{ log.message }}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ log.source }}</small>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-info" 
+                                        onclick="showLogDetails('{{ log.id }}')"
+                                        title="Detayları Görüntüle">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if logs.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if logs.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('log_viewer', page=logs.prev_num, scenario_id=request.args.get('scenario_id'), type=request.args.get('type'), level=request.args.get('level'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in logs.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == logs.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('log_viewer', page=page_num, scenario_id=request.args.get('scenario_id'), type=request.args.get('type'), level=request.args.get('level'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if logs.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('log_viewer', page=logs.next_num, scenario_id=request.args.get('scenario_id'), type=request.args.get('type'), level=request.args.get('level'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Detayları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Zaman:</strong> <span id="logTimestamp"></span></p>
+                        <p><strong>Seviye:</strong> <span id="logLevel"></span></p>
+                        <p><strong>Kaynak:</strong> <span id="logSource"></span></p>
+                        <p><strong>Kategori:</strong> <span id="logCategory"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Host:</strong> <span id="logHost"></span></p>
+                        <p><strong>Süreç:</strong> <span id="logProcess"></span></p>
+                        <p><strong>Log Tipi:</strong> <span id="logType"></span></p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Mesaj:</h6>
+                        <pre class="bg-light p-3 rounded" id="logMessage"></pre>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Ayrıştırılmış Veri:</h6>
+                        <pre class="bg-light p-3 rounded" id="logParsedData"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gelişmiş Filtreler</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="GET" id="advancedFilterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Senaryo</label>
+                        <select class="form-select" name="scenario_id">
+                            <option value="">Tümü</option>
+                            {% for scenario in scenarios %}
+                            <option value="{{ scenario.id }}" {% if request.args.get('scenario_id')|int == scenario.id %}selected{% endif %}>
+                                {{ scenario.scenario_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Log Tipi</label>
+                        <select class="form-select" name="type">
+                            <option value="">Tümü</option>
+                            <option value="manual" {% if request.args.get('type') == 'manual' %}selected{% endif %}>Manuel</option>
+                            <option value="auto" {% if request.args.get('type') == 'auto' %}selected{% endif %}>Otomatik</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Seviye</label>
+                        <select class="form-select" name="level">
+                            <option value="">Tümü</option>
+                            <option value="INFO" {% if request.args.get('level') == 'INFO' %}selected{% endif %}>INFO</option>
+                            <option value="WARNING" {% if request.args.get('level') == 'WARNING' %}selected{% endif %}>WARNING</option>
+                            <option value="ERROR" {% if request.args.get('level') == 'ERROR' %}selected{% endif %}>ERROR</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Başlangıç Tarihi</label>
+                        <input type="date" class="form-control" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bitiş Tarihi</label>
+                        <input type="date" class="form-control" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mesaj İçeriği</label>
+                        <input type="text" class="form-control" name="message_content" value="{{ request.args.get('message_content', '') }}" placeholder="Aranacak kelime veya ifade">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sayfa Başına Kayıt</label>
+                        <select class="form-select" name="per_page">
+                            <option value="10" {% if request.args.get('per_page', '10') == '10' %}selected{% endif %}>10</option>
+                            <option value="25" {% if request.args.get('per_page') == '25' %}selected{% endif %}>25</option>
+                            <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50</option>
+                            <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">Filtrele</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showLogDetails(logId) {
+    fetch(`/api/logs/${logId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Log detayları alınamadı');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Format timestamp
+            const timestamp = new Date(data.timestamp).toLocaleString('tr-TR');
+            
+            // Update modal content
+            document.getElementById('logTimestamp').textContent = timestamp;
+            document.getElementById('logLevel').textContent = data.level;
+            document.getElementById('logSource').textContent = data.source;
+            document.getElementById('logCategory').textContent = data.category;
+            document.getElementById('logHost').textContent = data.host || '-';
+            document.getElementById('logProcess').textContent = data.process || '-';
+            document.getElementById('logType').textContent = data.log_type;
+            document.getElementById('logMessage').textContent = data.message;
+            document.getElementById('logParsedData').textContent = 
+                JSON.stringify(data.parsed_data, null, 2);
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('logDetailsModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Log detayları alınırken bir hata oluştu.');
+        });
+}
+
+// Initialize filter modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix for Bootstrap modal compatibility
+    if (typeof bootstrap !== 'undefined') {
+        var filterModalEl = document.getElementById('filterModal');
+        if (filterModalEl) {
+            var filterModal = new bootstrap.Modal(filterModalEl);
+            
+            // Fix for older data-toggle attributes
+            document.querySelector('[data-toggle="modal"][data-target="#filterModal"]').addEventListener('click', function(e) {
+                e.preventDefault();
+                filterModal.show();
+            });
+        }
+    }
+});
+</script>
+
+<style>
+.badge {
+    font-size: 0.875rem;
+    padding: 0.4em 0.8em;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+pre code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+</style>
+{% endblock %} 

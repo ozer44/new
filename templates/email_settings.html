@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-envelope me-2 text-primary"></i>
+                E-posta Ayarları
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('email_settings') }}">
+                <!-- SMTP Ayarları -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">
+                            <i class="fas fa-server me-2"></i>
+                            SMTP Sunucu Ayarları
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">SMTP Sunucu</label>
+                            <input type="text" class="form-control" name="smtp_server" value="smtp.example.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SMTP Port</label>
+                            <input type="number" class="form-control" name="smtp_port" value="587">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kullanıcı Adı</label>
+                            <input type="text" class="form-control" name="smtp_username">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Şifre</label>
+                            <input type="password" class="form-control" name="smtp_password">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="use_ssl" id="useSSL" checked>
+                                <label class="form-check-label" for="useSSL">
+                                    SSL/TLS Kullan
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="mb-3">
+                            <i class="fas fa-envelope-open me-2"></i>
+                            E-posta Ayarları
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Gönderen E-posta</label>
+                            <input type="email" class="form-control" name="from_email" value="noreply@example.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Gönderen Adı</label>
+                            <input type="text" class="form-control" name="from_name" value="MFT System">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Test E-postası</label>
+                            <div class="input-group">
+                                <input type="email" class="form-control" name="test_email" placeholder="test@example.com">
+                                <button type="button" class="btn btn-outline-primary">
+                                    <i class="fas fa-paper-plane me-2"></i>Test E-postası Gönder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bildirim Şablonları -->
+                <h6 class="mb-3">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Bildirim Şablonları
+                </h6>
+                <div class="mb-4">
+                    <div class="mb-3">
+                        <label class="form-label">Başarılı Transfer Bildirimi</label>
+                        <textarea class="form-control" name="success_template" rows="4">Senaryo: {scenario_name}
+Durum: Başarılı
+Zaman: {timestamp}
+Detaylar: {details}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hata Bildirimi</label>
+                        <textarea class="form-control" name="error_template" rows="4">Senaryo: {scenario_name}
+Durum: Hata
+Zaman: {timestamp}
+Hata: {error_message}
+Detaylar: {details}</textarea>
+                    </div>
+                </div>
+
+                <!-- Bildirim Ayarları -->
+                <h6 class="mb-3">
+                    <i class="fas fa-bell me-2"></i>
+                    Bildirim Ayarları
+                </h6>
+                <div class="mb-4">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="notify_success" id="notifySuccess" checked>
+                        <label class="form-check-label" for="notifySuccess">
+                            Başarılı transferlerde bildirim gönder
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="notify_error" id="notifyError" checked>
+                        <label class="form-check-label" for="notifyError">
+                            Hatalı transferlerde bildirim gönder
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="notify_retry" id="notifyRetry">
+                        <label class="form-check-label" for="notifyRetry">
+                            Yeniden deneme durumlarında bildirim gönder
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('index') }}" class="btn btn-light me-2">İptal</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Ayarları Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--text-color);
+}
+
+.form-control, .form-select {
+    border-color: #e2e8f0;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+h6 {
+    font-weight: 600;
+    color: var(--text-color);
+}
+</style>
+{% endblock %} 

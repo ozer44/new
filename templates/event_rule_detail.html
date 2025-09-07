@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Event Rule Detay - {{ rule.attributes.info.Name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Event Rule Detay - {{ rule.attributes.info.Name }}</h1>
+            <a href="{{ url_for('event_rules', connection_id=connection.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Geri Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Senaryo Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Senaryo Adı:</strong> {{ rule.attributes.info.Name }}</p>
+                            <p><strong>Durum:</strong> 
+                                <span class="badge {% if rule.attributes.info.Enabled %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ 'active' if rule.attributes.info.Enabled else 'passive' }}
+                                </span>
+                            </p>
+                            <p><strong>Tip:</strong> 
+                                {% if rule.type in ['On IP Added to Ban List Rule', 'On Service Started Rule', 'On Service Stopped Rule', 'On Site Started Rule', 'On Site Stop Rule', 'ServiceStarted'] %}
+                                    Event
+                                {% else %}
+                                    Timer
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Klasör ID:</strong> {{ rule.attributes.info.FolderId if rule.attributes.info.FolderId else '-' }}</p>
+                            <p><strong>Departman:</strong> {{ rule.attributes.info.Department if rule.attributes.info.Department else '-' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if rule.attributes.statements and rule.attributes.statements.StatementsList %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Senaryo Adımları</h5>
+                </div>
+                <div class="card-body">
+                    {% for statement in rule.attributes.statements.StatementsList %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Adım {{ loop.index }}</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if statement.ActionStatement %}
+                                {% if statement.ActionStatement.Action %}
+                                    {% for action_type, action_data in statement.ActionStatement.Action.items() %}
+                                        <div class="mb-3">
+                                            <h6 class="mb-2">
+                                                {% if action_type == 'UploadAction' %}
+                                                    <span class="badge bg-primary">Upload</span>
+                                                {% elif action_type == 'DownloadAction' %}
+                                                    <span class="badge bg-info">Download</span>
+                                                {% elif action_type == 'MonitorAction' %}
+                                                    <span class="badge bg-warning">Monitor</span>
+                                                {% elif action_type == 'WindowsEventAction' %}
+                                                    <span class="badge bg-purple">Windows Event</span>
+                                                {% elif action_type == 'WindowsServiceAction' %}
+                                                    <span class="badge bg-indigo">Windows Service</span>
+                                                {% elif action_type == 'PowerShellScriptAction' %}
+                                                    <span class="badge bg-success">PowerShell Script</span>
+                                                {% elif action_type == 'WindowsEventLogAction' %}
+                                                    <span class="badge bg-warning">Windows Event Log</span>
+                                                {% endif %}
+                                            </h6>
+                                            
+                                            {% if action_data.Source %}
+                                                <p><strong>Kaynak:</strong> {{ action_data.Source }}</p>
+                                            {% endif %}
+                                            {% if action_data.Destination %}
+                                                <p><strong>Hedef:</strong> {{ action_data.Destination }}</p>
+                                            {% endif %}
+                                            {% if action_data.LocalPath %}
+                                                <p><strong>Local Path:</strong> {{ action_data.LocalPath }}</p>
+                                            {% endif %}
+                                            {% if action_data.RemotePath %}
+                                                <p><strong>Remote Path:</strong> {{ action_data.RemotePath }}</p>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

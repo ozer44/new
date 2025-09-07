@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-cog me-2 text-primary"></i>
+                Log Ayarları
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="needs-validation" novalidate>
+                <div class="row g-3">
+                    <!-- Auto Import Toggle -->
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="auto_import_enabled" name="auto_import_enabled"
+                                   {% if settings and settings.auto_import_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="auto_import_enabled">
+                                Otomatik Log İçe Aktarma
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Belirtilen dizinden otomatik olarak log dosyalarını içe aktarır.
+                        </div>
+                    </div>
+
+                    <!-- Import Directory -->
+                    <div class="col-md-6">
+                        <label for="import_directory" class="form-label">İzlenecek Dizin</label>
+                        <input type="text" class="form-control" id="import_directory" name="import_directory"
+                               value="{{ settings.import_directory if settings else '' }}" required>
+                        <div class="invalid-feedback">
+                            Lütfen izlenecek dizini belirtin.
+                        </div>
+                        <div class="form-text">
+                            Log dosyalarının bulunduğu dizinin tam yolu
+                        </div>
+                    </div>
+
+                    <!-- File Pattern -->
+                    <div class="col-md-6">
+                        <label for="file_pattern" class="form-label">Dosya Deseni</label>
+                        <input type="text" class="form-control" id="file_pattern" name="file_pattern"
+                               value="{{ settings.file_pattern if settings else '*.log' }}" required>
+                        <div class="invalid-feedback">
+                            Lütfen dosya desenini belirtin.
+                        </div>
+                        <div class="form-text">
+                            Örnek: *.log, *.txt, scenario_*.log
+                        </div>
+                    </div>
+
+                    <!-- Parse Interval -->
+                    <div class="col-md-6">
+                        <label for="parse_interval" class="form-label">Kontrol Aralığı (saniye)</label>
+                        <input type="number" class="form-control" id="parse_interval" name="parse_interval"
+                               value="{{ settings.parse_interval if settings else 60 }}" min="30" required>
+                        <div class="invalid-feedback">
+                            Lütfen geçerli bir kontrol aralığı girin (minimum 30 saniye).
+                        </div>
+                    </div>
+
+                    <!-- Retention Period -->
+                    <div class="col-md-6">
+                        <label for="retention_period" class="form-label">Saklama Süresi (gün)</label>
+                        <input type="number" class="form-control" id="retention_period" name="retention_period"
+                               value="{{ settings.retention_period if settings else 30 }}" min="1" required>
+                        <div class="invalid-feedback">
+                            Lütfen geçerli bir saklama süresi girin.
+                        </div>
+                    </div>
+
+                    <!-- Max File Size -->
+                    <div class="col-md-6">
+                        <label for="max_file_size" class="form-label">Maksimum Dosya Boyutu (MB)</label>
+                        <input type="number" class="form-control" id="max_file_size" name="max_file_size"
+                               value="{{ settings.max_file_size if settings else 10 }}" min="1" required>
+                        <div class="invalid-feedback">
+                            Lütfen geçerli bir dosya boyutu girin.
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Kaydet
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Status Card -->
+            {% if settings and settings.auto_import_enabled %}
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Otomatik İçe Aktarma Durumu
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-clock text-primary fa-2x"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="small text-muted">Son Kontrol</div>
+                                    <div>{{ settings.last_check.strftime('%Y-%m-%d %H:%M:%S') if settings.last_check else 'Henüz Kontrol Edilmedi' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-file-import text-success fa-2x"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="small text-muted">İçe Aktarılan Log Sayısı</div>
+                                    <div>{{ settings.imported_count if settings.imported_count else 0 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="small text-muted">Hata Sayısı</div>
+                                    <div>{{ settings.error_count if settings.error_count else 0 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mt-4" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function () {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+
+// Toggle required fields based on auto import enabled
+document.getElementById('auto_import_enabled').addEventListener('change', function() {
+    const requiredFields = [
+        'import_directory',
+        'file_pattern',
+        'parse_interval',
+        'retention_period',
+        'max_file_size'
+    ];
+    
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        field.required = this.checked;
+        if (!this.checked) {
+            field.value = '';
+        }
+    });
+});
+</script>
+{% endblock %} 

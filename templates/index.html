@@ -1,0 +1,834 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- İstatistik Kartları -->
+    <div class="row g-4 mb-4">,
+        <!-- Toplam Senaryo Kartı -->
+      {% if current_user.is_admin or 'scenario_viewer' in current_user.roles|map(attribute='name')|list %}
+        <div class="col-xl-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-card__content">
+                    <div class="stat-card__info">
+                        <div class="stat-card__info-title text-uppercase">Toplam Senaryo</div>
+                        <div class="stat-card__info-value">{{ total_scenarios }}</div>
+                    </div>
+                    <div class="stat-card__icon">
+                        <div class="stat-card__icon-circle bg-blue-soft">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card__chart">
+                    <div class="stat-card__chart-bg bg-blue-soft"></div>
+                </div>
+            </div>
+        </div>
+        {% for action_type, count in action_counts.items() %}
+        <div class="col-xl-4 col-md-6">
+            <div class="stat-card">
+                <div class="stat-card__content">
+                    <div class="stat-card__info">
+                        <div class="stat-card__info-title text-uppercase">{{ action_type }}</div>
+                        <div class="stat-card__info-value">{{ count }}</div>
+                    </div>
+                    <div class="stat-card__icon">
+                        <div class="stat-card__icon-circle {% if 'Download' in action_type %}bg-purple-soft{% elif 'Upload' in action_type %}bg-green-soft{% else %}bg-orange-soft{% endif %}">
+                            <i class="fas {% if 'Download' in action_type %}fa-download{% elif 'Upload' in action_type %}fa-upload{% elif 'Azure' in action_type %}fa-cloud{% else %}fa-exchange-alt{% endif %}"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card__chart">
+                    <div class="stat-card__chart-bg {% if 'Download' in action_type %}bg-purple-soft{% elif 'Upload' in action_type %}bg-green-soft{% else %}bg-orange-soft{% endif %}"></div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <!-- Arama ve Filtre -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary">
+                <i class="fas fa-list me-2"></i>
+                Senaryo Listesi
+            </h6>
+            <div class="d-flex gap-3">
+                <form class="d-flex gap-2" method="get">
+            <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                </span>
+                        <input type="text" class="form-control border-start-0 ps-0" name="search" value="{{ search }}" placeholder="Senaryo ara...">
+                        <select class="form-select border-start-0" name="filter_type" style="max-width: 150px;">
+                            <option value="" {% if not filter_type %}selected{% endif %}>Tüm Alanlar</option>
+                            <option value="name" {% if filter_type == 'name' %}selected{% endif %}>Senaryo Adı</option>
+                            <option value="steps" {% if filter_type == 'steps' %}selected{% endif %}>Adımlar</option>
+                        </select>
+                        <button class="btn btn-primary" type="submit">
+                            Ara
+                        </button>
+            </div>
+                </form>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('add_scenario') }}" class="btn btn-success d-flex align-items-center">
+                    <i class="fas fa-plus me-2"></i> Yeni Senaryo
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0">
+                                <i class="fas fa-file-alt me-2 text-primary"></i>
+                                Senaryo Adı
+                            </th>
+                            <th class="border-0">
+                                <i class="fas fa-clock me-2 text-primary"></i>
+                                Çalışma Sıklığı
+                            </th>
+                            <th class="border-0">
+                                <i class="fas fa-cog me-2 text-primary"></i>
+                                Aksiyon Tipi
+                            </th>
+                            <th class="border-0">
+                                <i class="fas fa-user-tie me-2 text-primary"></i>
+                                Sorumlu Kişi
+                            </th>
+                            <th class="border-0">
+                                <i class="fas fa-toggle-on me-2 text-primary"></i>
+                                Durum
+                            </th>
+                    </tr>
+                </thead>
+                    <tbody>
+                    {% for group_id, group in scenario_groups.items() %}
+                        <tr class="scenario-row {% if group['scenarios'][0].status != 'active' %}inactive-scenario{% endif %} {% if group['scenarios']|length != related_scenarios_count[group['scenarios'][0].scenario_name] %}step-mismatch-row{% endif %}" 
+                            onclick="window.location.href='{{ url_for('scenario_detail', scenario_id=group['scenarios'][0].id) }}'"
+                            role="button">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="scenario-icon me-3">
+                                        <i class="fas fa-file-code fa-lg text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-">{{ group['scenarios'][0].scenario_name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas {% if group['scenarios'][0].recurrence == 'Continually' %}fa-sync{% elif group['scenarios'][0].recurrence == 'Daily' %}fa-calendar-day{% elif group['scenarios'][0].recurrence == 'Weekly' %}fa-calendar-week{% elif group['scenarios'][0].recurrence == 'Monthly' %}fa-calendar{% else %}fa-clock{% endif %} me-2 text-info"></i>
+                                    <div>
+                                        <span class="d-block">{{ group['scenarios'][0].recurrence }}</span>
+                                        {% set repeat_rate = {
+                                            'Continually': 'Her 5 dakikada',
+                                            'Daily': 'Günde bir kez',
+                                            'Weekly': 'Haftada bir kez',
+                                            'Monthly': 'Ayda bir kez',
+                                            'Folder Monitor': 'Sürekli izleme',
+                                            'Weekday': 'Hafta içi her gün',
+                                            'Daily (Weekday)': 'Hafta içi günde bir kez'
+                                        }.get(group['scenarios'][0].recurrence, '-') %}
+                                        <small class="text-muted">{{ repeat_rate }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for action_type in group['action_types'] %}
+                                    <span class="badge {% if action_type == 'Download' %}bg-primary{% elif action_type == 'Upload' %}bg-success{% elif action_type == 'CloudDownload' %}bg-info{% elif action_type == 'CloudUpload' %}bg-info{% elif action_type == 'WindowsEventRule' %}bg-warning{% elif action_type == 'PowerShellAction' %}bg-danger{% else %}bg-secondary{% endif %} {% if group['scenarios'][0].status != 'active' %}text-decoration-line-through opacity-50{% endif %}">
+                                        <i class="fas {% if action_type == 'Download' %}fa-download{% elif action_type == 'Upload' %}fa-upload{% elif action_type == 'CloudDownload' %}fa-cloud-download-alt{% elif action_type == 'CloudUpload' %}fa-cloud-upload-alt{% elif action_type == 'WindowsEventRule' %}fa-windows{% elif action_type == 'PowerShellAction' %}fa-terminal{% else %}fa-cog{% endif %} me-1"></i>
+                                        {{ action_type }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="responsible-person-cell" data-scenario-id="{{ group['scenarios'][0].id }}">
+                                        <span class="responsible-person-text badge bg-warning text-dark">{{ group['scenarios'][0].responsible_person or '-' }}</span>
+                                        {% if current_user.is_admin or current_user.has_permission('manage_responsible_persons') %}
+                                        <button class="btn btn-sm btn-link edit-responsible-person ms-2" title="Sorumlu kişiyi düzenle">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if current_user.is_admin or 'scenario_manager' in current_user.roles|map(attribute='name')|list %}
+                                {% if group['scenarios'][0].status == 'active' %}
+                                <button class="btn btn-sm btn-success toggle-status" data-scenario-id="{{ group['scenarios'][0].id }}" data-current-status="active">
+                                    <i class="fas fa-check-circle"></i> Aktif
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-danger toggle-status" data-scenario-id="{{ group['scenarios'][0].id }}" data-current-status="inactive">
+                                    <i class="fas fa-times-circle"></i> Pasif
+                                </button>
+                                {% endif %}
+                                {% else %}
+                                <span class="badge {% if group['scenarios'][0].status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ 'Aktif' if group['scenarios'][0].status == 'active' else 'Pasif' }}
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav class="p-3 border-top">
+            <ul class="pagination justify-content-center mb-0">
+                    {% if pagination.has_prev %}
+                <li class="page-item">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, search=search, filter_type=filter_type) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                    {% for page_num in pagination.iter_pages() %}
+                    {% if page_num %}
+                            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('index', page=page_num, search=search, filter_type=filter_type) }}">
+                                    {{ page_num }}
+                                </a>
+                        </li>
+                    {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                    {% if pagination.has_next %}
+                <li class="page-item">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.next_num, search=search, filter_type=filter_type) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* Yeni istatistik kartları için stiller */
+.stat-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px 0 rgba(34, 41, 47, 0.1);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 32px 0 rgba(34, 41, 47, 0.15);
+}
+
+.stat-card__content {
+    padding: 1.5rem;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.stat-card__info-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #5e6278;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+
+.stat-card__info-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #181c32;
+    line-height: 1.2;
+}
+
+.stat-card__icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-card__icon-circle {
+    transform: scale(1.1);
+}
+
+.stat-card__chart {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    opacity: 0.2;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-card__chart {
+    opacity: 0.3;
+}
+
+.stat-card__chart-bg {
+    position: absolute;
+    bottom: -30px;
+    left: -30px;
+    width: 200%;
+    height: 100px;
+    border-radius: 50%;
+}
+
+/* Renk şemaları */
+.bg-blue-soft {
+    background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+    color: #fff;
+}
+
+.bg-purple-soft {
+    background: linear-gradient(135deg, #6f42c1 0%, #a78bfa 100%);
+    color: #fff;
+}
+
+.bg-green-soft {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    color: #fff;
+}
+
+.bg-orange-soft {
+    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+    color: #fff;
+}
+
+.scenario-row {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    position: relative;
+}
+
+.scenario-row::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.scenario-row:not(.inactive-scenario):hover {
+    background-color: rgba(13, 110, 253, 0.08);
+}
+
+.scenario-row:not(.inactive-scenario):hover::after {
+    background: linear-gradient(90deg, #0d6efd, #0dcaf0);
+}
+
+.inactive-scenario {
+    opacity: 0.7;
+    background-color: rgba(173, 181, 189, 0.05);
+}
+
+.inactive-scenario:hover {
+    opacity: 0.9;
+    background-color: rgba(173, 181, 189, 0.1);
+}
+
+.inactive-scenario:hover::after {
+    background: linear-gradient(90deg, #adb5bd, #ced4da);
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+    font-size: 0.85rem;
+}
+
+.badge.rounded-pill {
+    padding-right: 1em;
+    padding-left: 1em;
+}
+
+.btn-group .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+}
+
+.page-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    margin: 0 0.125rem;
+}
+
+.page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.scenario-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.input-group {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.input-group-text,
+.form-control,
+.form-select {
+    border-color: #e9ecef;
+}
+
+.card {
+    transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.border-start {
+    border-left-width: 4px !important;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.fw-medium {
+    font-weight: 500;
+}
+
+.step-mismatch-row {
+    background-color: rgba(220, 53, 69, 0.05) !important;
+}
+
+.step-mismatch-row:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.step-mismatch-row::after {
+    background: linear-gradient(90deg, #dc3545, #ff6b6b) !important;
+}
+
+.step-mismatch-row.inactive-scenario {
+    background-color: rgba(220, 53, 69, 0.03) !important;
+    opacity: 0.7;
+}
+
+.step-mismatch-row.inactive-scenario:hover {
+    background-color: rgba(220, 53, 69, 0.08) !important;
+    opacity: 0.9;
+}
+
+[data-bs-theme="dark"] .stat-card {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .stat-card__info-title {
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .stat-card__info-value {
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .table {
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: var(--bs-gray-800);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .card-header {
+    background-color: var(--bs-gray-800) !important;
+    border-bottom-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-gray-400) !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--bs-gray-800) !important;
+}
+
+[data-bs-theme="dark"] .pagination .page-link {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-gray-700);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .pagination .page-item.disabled .page-link {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-gray-700);
+    color: var(--bs-gray-600);
+}
+
+[data-bs-theme="dark"] a {
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] a:hover {
+    color: var(--bs-primary);
+}
+
+.responsible-person-cell {
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+}
+
+.responsible-person-cell input {
+    width: 150px;
+}
+
+.edit-responsible-person {
+    opacity: 1;
+    transition: opacity 0.2s;
+    color: #6c757d;
+}
+
+.edit-responsible-person:hover {
+    color: #0d6efd;
+}
+
+.responsible-person-cell:hover .edit-responsible-person {
+    opacity: 1;
+}
+</style>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Arama formunu dinle
+    const searchForm = document.querySelector('form[method="get"]');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchInput = this.querySelector('input[name="search"]');
+            const filterType = this.querySelector('select[name="filter_type"]');
+            const currentPage = new URLSearchParams(window.location.search).get('page') || '1';
+            
+            // Arama parametrelerini URL'ye ekle
+            const searchParams = new URLSearchParams();
+            if (searchInput.value) searchParams.set('search', searchInput.value);
+            if (filterType.value) searchParams.set('filter_type', filterType.value);
+            searchParams.set('page', currentPage);
+            
+            // Sayfayı yönlendir
+            window.location.href = `${window.location.pathname}?${searchParams.toString()}`;
+        });
+    }
+
+    // Sayfalama linklerini güncelle
+    const paginationLinks = document.querySelectorAll('.pagination .page-link');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const currentParams = new URLSearchParams(window.location.search);
+            const page = this.getAttribute('href').split('page=')[1].split('&')[0];
+            currentParams.set('page', page);
+            window.location.href = `${window.location.pathname}?${currentParams.toString()}`;
+        });
+    });
+
+    // Senaryo satırlarına tıklama olayını ekle
+    const scenarioRows = document.querySelectorAll('.scenario-row');
+    scenarioRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Eğer tıklanan element veya üst elementlerinden biri responsible-person-cell veya toggle-status ise,
+            // senaryo detayına yönlendirmeyi engelle
+            if (e.target.closest('.responsible-person-cell') || e.target.closest('.toggle-status')) {
+                e.stopPropagation();
+                return;
+            }
+            
+            // Aksi takdirde senaryo detayına git
+            const scenarioId = this.querySelector('.responsible-person-cell').dataset.scenarioId;
+            window.location.href = `/scenario/${scenarioId}`;
+        });
+    });
+
+    // Senaryo durumu değiştirme işlevselliği
+    const toggleButtons = document.querySelectorAll('.toggle-status');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Senaryo detayına gitmeyi engelle
+            const scenarioId = this.dataset.scenarioId;
+            const currentStatus = this.dataset.currentStatus;
+            
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: `Senaryoyu ${currentStatus === 'active' ? 'pasif' : 'aktif'} yapmak istediğinize emin misiniz?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet',
+                cancelButtonText: 'Hayır'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Loading göster
+                    const button = this;
+                    button.disabled = true;
+                    
+                    // API isteği gönder
+                    fetch(`/rest-api/scenario/${scenarioId}/toggle-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Butonu güncelle
+                            if (data.new_status === 'active') {
+                                button.classList.remove('btn-danger');
+                                button.classList.add('btn-success');
+                                button.innerHTML = '<i class="fas fa-check-circle"></i> Aktif';
+                                button.dataset.currentStatus = 'active';
+                            } else {
+                                button.classList.remove('btn-success');
+                                button.classList.add('btn-danger');
+                                button.innerHTML = '<i class="fas fa-times-circle"></i> Pasif';
+                                button.dataset.currentStatus = 'inactive';
+                            }
+                            
+                            // Başarı mesajı göster
+                            Swal.fire({
+                                title: 'Başarılı!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            // Hata mesajı göster
+                            Swal.fire({
+                                title: 'Hata!',
+                                text: data.message || 'Bir hata oluştu',
+                                icon: 'error'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Hata mesajı göster
+                        Swal.fire({
+                            title: 'Hata!',
+                            text: 'Aktif token bağlantısı yok veya süresi dolmuş.',
+                            icon: 'error'
+                        });
+                    })
+                    .finally(() => {
+                        button.disabled = false;
+                    });
+                }
+            });
+        });
+    });
+
+    // Sorumlu kişi düzenleme işlevselliği
+    const editButtons = document.querySelectorAll('.edit-responsible-person');
+    editButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Senaryo detayına gitmeyi engelle
+            const cell = this.closest('.responsible-person-cell');
+            const scenarioId = cell.dataset.scenarioId;
+            const currentText = cell.querySelector('.responsible-person-text').textContent;
+            
+            // Sorumlu kişileri getir
+            fetch('/get-responsible-persons')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mevcut içeriği dropdown ile değiştir
+                        const select = document.createElement('select');
+                        select.className = 'form-select form-select-sm';
+                        select.addEventListener('click', e => e.stopPropagation());
+                        
+                        // Boş seçenek ekle
+                        const emptyOption = document.createElement('option');
+                        emptyOption.value = '';
+                        emptyOption.textContent = 'Seçiniz...';
+                        select.appendChild(emptyOption);
+                        
+                        // Sorumlu kişileri ekle
+                        Object.keys(data.responsible_persons).forEach(name => {
+                            const option = document.createElement('option');
+                            option.value = name;
+                            option.textContent = name;
+                            if (name === currentText) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        });
+                        
+                        const saveButton = document.createElement('button');
+                        saveButton.className = 'btn btn-sm btn-success ms-2';
+                        saveButton.innerHTML = '<i class="fas fa-check"></i>';
+                        saveButton.addEventListener('click', e => e.stopPropagation()); // Senaryo detayına gitmeyi engelle
+                        
+                        const cancelButton = document.createElement('button');
+                        cancelButton.className = 'btn btn-sm btn-danger ms-2';
+                        cancelButton.innerHTML = '<i class="fas fa-times"></i>';
+                        cancelButton.addEventListener('click', e => e.stopPropagation()); // Senaryo detayına gitmeyi engelle
+                        
+                        // Mevcut içeriği temizle ve yeni elementleri ekle
+                        cell.innerHTML = '';
+                        cell.appendChild(select);
+                        cell.appendChild(saveButton);
+                        cell.appendChild(cancelButton);
+                        
+                        select.focus();
+                        
+                        // Kaydet butonu işlevselliği
+                        saveButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const selectedOption = select.options[select.selectedIndex];
+                            
+                            if (!selectedOption.value) {
+                                alert('Lütfen bir sorumlu kişi seçin.');
+                                return;
+                            }
+                            
+                            fetch(`/update-scenario-responsible/${scenarioId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-CSRFToken': '{{ csrf_token() }}'
+                                },
+                                body: new URLSearchParams({
+                                    'responsible_person': selectedOption.value
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: 'Başarılı!',
+                                        text: data.message,
+                                        icon: 'success',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Hata!',
+                                        text: data.message,
+                                        icon: 'error',
+                                        confirmButtonText: 'Tamam'
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire({
+                                    title: 'Hata!',
+                                    text: error.message || 'Bir hata oluştu',
+                                    icon: 'error',
+                                    confirmButtonText: 'Tamam'
+                                });
+                            });
+                        });
+                        
+                        // İptal butonu işlevselliği
+                        cancelButton.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            cell.innerHTML = `
+                                <span class="responsible-person-text badge bg-warning text-dark">${currentText}</span>
+                                <button class="btn btn-sm btn-link edit-responsible-person ms-2" title="Sorumlu kişiyi düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            `;
+                            // Yeni düzenleme butonuna event listener ekle
+                            cell.querySelector('.edit-responsible-person').addEventListener('click', button.onclick);
+                        });
+                        
+                        // Enter tuşu ile kaydet
+                        select.addEventListener('keypress', function(e) {
+                            if (e.key === 'Enter') {
+                                e.stopPropagation();
+                                saveButton.click();
+                            }
+                        });
+                        
+                        // Escape tuşu ile iptal
+                        select.addEventListener('keydown', function(e) {
+                            if (e.key === 'Escape') {
+                                e.stopPropagation();
+                                cancelButton.click();
+                            }
+                        });
+                    } else {
+                        alert('Sorumlu kişiler yüklenirken bir hata oluştu: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Sorumlu kişiler yüklenirken bir hata oluştu.');
+                    console.error('Error:', error);
+                });
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

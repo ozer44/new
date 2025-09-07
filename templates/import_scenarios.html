@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Senaryo İçe Aktarma</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Dosya Yükleme</h5>
+                            <form method="post" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="file">Dosya Seçin (Excel veya CSV)</label>
+                                    <input type="file" class="form-control-file" id="file" name="file" accept=".xlsx,.csv" required>
+                                    <small class="form-text text-muted">
+                                        Desteklenen formatlar: .xlsx, .csv<br>
+                                        Excel veya CSV dosyanız aşağıdaki sütunları içermelidir:<br>
+                                        - Custom ID (opsiyonel)<br>
+                                        - Scenario Name (zorunlu)<br>
+                                        - Recurrence (zorunlu)<br>
+                                        - Step Count (zorunlu)<br>
+                                        - Action Type (zorunlu)<br>
+                                        - Type (zorunlu)<br>
+                                        - Folder ID (opsiyonel)<br>
+                                        - Department (opsiyonel)<br>
+                                        - Source (zorunlu)<br>
+                                        - Destination (zorunlu)<br>
+                                        - Email Notification (opsiyonel)<br>
+                                        - Status (opsiyonel, varsayılan: 'active')<br>
+                                        <br>
+                                        Not: User ve Responsible Person alanları otomatik olarak mevcut kullanıcı bilgileriyle doldurulacaktır.
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> Dosyayı Yükle
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Geçerli Değerler</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Action Type</th>
+                                        <td>UNC, SFTP, FTP, Cloud Azure, Cloud AWS, Monitor, Local, -, Azure, HTTP</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Recurrence</th>
+                                        <td>Continually, Daily, Weekly, Monthly, Folder Monitor, Weekday, Daily (Weekday)</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Repeat Rate</th>
+                                        <td>Her 5 dakikada, Günde bir kez, Haftada bir kez, Ayda bir kez, Sürekli izleme, Hafta içi her gün</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Status</th>
+                                        <td>Herhangi bir değer (Boş bırakılırsa 'active' olarak ayarlanır)</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if validation_errors %}
+            <div class="card mt-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="m-0">Doğrulama Hataları</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Satır</th>
+                                    <th>Senaryo Adı</th>
+                                    <th>Hatalar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for error in validation_errors %}
+                                <tr>
+                                    <td>{{ error.row }}</td>
+                                    <td>{{ error.scenario_name }}</td>
+                                    <td>
+                                        <ul class="mb-0">
+                                            {% for err in error.errors %}
+                                            <li>{{ err }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

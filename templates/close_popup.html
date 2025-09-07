@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Microsoft Giriş</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 1rem;
+        }
+        .success {
+            color: #10b981;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .message {
+            margin: 1rem 0;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+        .details {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: left;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        .button {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        .primary-button {
+            background-color: #6366f1;
+            color: white;
+        }
+        .primary-button:hover {
+            background-color: #4f46e5;
+        }
+        .secondary-button {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .secondary-button:hover {
+            background-color: #d1d5db;
+        }
+        .status-text {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if success %}
+            <i class="fas fa-check-circle status-icon success"></i>
+            <div class="status-text">Giriş Başarılı</div>
+            <div class="message">Microsoft hesabınızla giriş yapıldı.</div>
+            <div class="details">
+                <p><strong>Kullanıcı:</strong> {{ current_user.full_name }}</p>
+                <p><strong>E-posta:</strong> {{ current_user.email }}</p>
+                <p><strong>Giriş Zamanı:</strong> {{ current_user.last_login.strftime('%d.%m.%Y %H:%M:%S') if current_user.last_login else 'İlk kez giriş yapıldı' }}</p>
+            </div>
+            <div class="button-container">
+                <button class="button primary-button" onclick="redirectToMain()">Ana Sayfaya Git</button>
+                <button class="button secondary-button" onclick="closePopup()">Pencereyi Kapat</button>
+            </div>
+        {% else %}
+            <i class="fas fa-exclamation-circle status-icon error"></i>
+            <div class="status-text">Giriş Başarısız</div>
+            <div class="message">{{ error_message }}</div>
+            <div class="details">
+                <p><strong>Hata Detayı:</strong></p>
+                <p>{{ error_details }}</p>
+            </div>
+            <div class="button-container">
+                <button class="button primary-button" onclick="retryLogin()">Tekrar Dene</button>
+                <button class="button secondary-button" onclick="closePopup()">Pencereyi Kapat</button>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function redirectToMain() {
+            window.opener.postMessage('login_success', '*');
+            window.close();
+        }
+
+        function closePopup() {
+            window.close();
+        }
+
+        function retryLogin() {
+            window.location.href = "{{ url_for('microsoft_login') }}";
+        }
+
+        // Automatically redirect after 3 seconds if successful
+        {% if success %}
+        setTimeout(function() {
+            redirectToMain();
+        }, 3000);
+        {% endif %}
+    </script>
+</body>
+</html> 
